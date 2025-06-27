@@ -106,10 +106,26 @@ app.get('/batepapo.html', protegePagina, (req, res) => {
 
 app.get('/cadastroUsuarios', protegePagina, async (req, res) => {
   const usuarios = await lerArquivoJSON('usuarios.json');
-  let tabela = '<table border="1" cellpadding="5" cellspacing="0"><thead><tr><th>Nome</th><th>Email</th></tr></thead><tbody>';
+  let tabela = `<table border="1" cellpadding="5" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Email</th>
+        <th>Nickname</th>
+        <th>Data de Nascimento</th>
+        <th>Assunto</th>
+      </tr>
+    </thead>
+    <tbody>`;
 
   for (const u of usuarios) {
-    tabela += `<tr><td>${u.nome}</td><td>${u.email}</td></tr>`;
+    tabela += `<tr>
+      <td>${u.nome}</td>
+      <td>${u.email}</td>
+      <td>${u.nickname}</td>
+      <td>${u.dataNascimento}</td>
+      <td>${u.assunto}</td>
+    </tr>`;
   }
   tabela += '</tbody></table>';
 
@@ -122,6 +138,18 @@ app.get('/cadastroUsuarios', protegePagina, async (req, res) => {
       <form method="POST" action="/cadastroUsuarios">
         <label>Nome:<br><input type="text" name="nome" required></label><br><br>
         <label>Email:<br><input type="email" name="email" required></label><br><br>
+        <label>Senha:<br><input type="password" name="senha" required></label><br><br>
+        <label>Nickname:<br><input type="text" name="nickname" required></label><br><br>
+        <label>Data de Nascimento:<br><input type="date" name="dataNascimento" required></label><br><br>
+        <label>Assunto preferido:<br>
+          <select name="assunto" required>
+            <option value="">--Selecione--</option>
+            <option value="Futebol">Futebol</option>
+            <option value="Games">Games</option>
+            <option value="Carros">Carros</option>
+            <option value="Música">Música</option>
+          </select>
+        </label><br><br>
         <button type="submit">Cadastrar</button>
       </form>
       <hr>
@@ -134,14 +162,14 @@ app.get('/cadastroUsuarios', protegePagina, async (req, res) => {
 });
 
 app.post('/cadastroUsuarios', protegePagina, async (req, res) => {
-  const { nome, email } = req.body;
+  const { nome, email, senha, nickname, dataNascimento, assunto } = req.body;
 
-  if (!nome || !email) {
+  if (!nome || !email || !senha || !nickname || !dataNascimento || !assunto) {
     return res.send('<h1>Dados incompletos</h1><a href="/cadastroUsuarios">Voltar</a>');
   }
 
   const usuarios = await lerArquivoJSON('usuarios.json');
-  usuarios.push({ nome, email });
+  usuarios.push({ nome, email, senha, nickname, dataNascimento, assunto });
   await salvarArquivoJSON('usuarios.json', usuarios);
 
   res.redirect('/cadastroUsuarios');
