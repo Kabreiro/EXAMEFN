@@ -58,18 +58,9 @@ app.get('/logout', protegePagina, (req, res) => {
 
 app.get('/menu.html', protegePagina, (req, res) => {
   const ultimoAcesso = req.cookies.ultimoAcesso;
-  let mensagem;
-
-  if (ultimoAcesso) {
-    try {
-      const data = new Date(ultimoAcesso);
-      mensagem = `Último acesso: ${data.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
-    } catch {
-      mensagem = 'Último acesso: data inválida';
-    }
-  } else {
-    mensagem = 'Último acesso: não disponível.';
-  }
+  const mensagem = ultimoAcesso
+    ? `Último acesso: ${new Date(ultimoAcesso).toLocaleString('pt-BR')}`
+    : 'Último acesso: não disponível.';
 
   res.send(`
     <!DOCTYPE html>
@@ -90,7 +81,6 @@ app.get('/menu.html', protegePagina, (req, res) => {
     </html>
   `);
 });
-
 
 app.get('/batepapo.html', protegePagina, (req, res) => {
   res.send(`
