@@ -6,8 +6,9 @@ const path = require('path');
 
 const app = express();
 
-// Middleware para interpretar application/x-www-form-urlencoded
-// É importante aplicar globalmente para pegar todos os POSTs
+// Middleware para interpretar JSON
+app.use(express.json());
+// Middleware para interpretar urlencoded
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
@@ -131,11 +132,14 @@ function gerarPaginaBatePapo(nickname, assunto, mensagens) {
         form.addEventListener('submit', async e => {
           e.preventDefault();
 
-          const formData = new FormData(form);
+          const usuario = form.usuario.value;
+          const assunto = form.assunto.value;
+          const mensagem = txtMensagem.value;
 
           const response = await fetch('/postarMensagem', {
             method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario, assunto, mensagem })
           });
 
           if (!response.ok) {
