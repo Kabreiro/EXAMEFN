@@ -96,26 +96,65 @@ function gerarPaginaBatePapo(nickname, assunto, mensagens) {
   return `
     <!DOCTYPE html>
     <html lang="pt-BR">
-    <head><meta charset="UTF-8"><title>Bate-papo - ${assunto}</title></head>
+    <head>
+      <meta charset="UTF-8">
+      <title>Bate-papo - ${assunto}</title>
+    </head>
     <body>
       <h1>Bate-papo: ${assunto}</h1>
-      <form method="POST" action="/postarMensagem">
+      <form id="formMensagem">
         <input type="hidden" name="assunto" value="${assunto}">
         <label>Usuário:
           <input type="text" name="usuario" value="${nickname}" readonly>
         </label><br><br>
         <label>Mensagem:<br>
-          <textarea name="mensagem" rows="4" cols="50"></textarea>
+          <textarea name="mensagem" id="txtMensagem" rows="4" cols="50"></textarea>
         </label><br><br>
-        <button>Enviar</button>
+        <button type="submit">Enviar</button>
       </form>
       <hr><h2>Mensagens</h2>
-      <div style="border:1px solid #ccc; height:300px; overflow-y:auto; padding:5px;">
+      <div id="divMensagens" style="border:1px solid #ccc; height:300px; overflow-y:auto; padding:5px;">
         ${mensagensFiltradas.length === 0
           ? '<p>Sem mensagens.</p>'
           : mensagensFiltradas.map(m => `<p><b>${m.usuario}</b> [${new Date(m.dataHora).toLocaleString()}]: ${m.mensagem}</p>`).join('')}
       </div>
       <br><a href="/batepapo.html">Voltar</a> | <a href="/menu.html">Menu</a>
+
+      <script>
+        const form = document.getElementById('formMensagem');
+        const divMensagens = document.getElementById('divMensagens');
+        const txtMensagem = document.getElementById('txtMensagem');
+
+        form.addEventListener('submit', async e => {
+          e.preventDefault();
+
+          const formData = new FormData(form);
+
+          const response = await fetch('/postarMensagem', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            alert('Erro ao enviar mensagem.');
+            return;
+          }
+
+          const data = await response.json();
+
+          if (data.mensagens.length === 0) {
+            divMensagens.innerHTML = '<p>Sem mensagens.</p>';
+          } else {
+            divMensagens.innerHTML = data.mensagens.map(m =>
+              \`<p><b>\${m.usuario}</b> [\${new Date(m.dataHora).toLocaleString()}]: \${m.mensagem}</p>\`
+            ).join('');
+          }
+
+          txtMensagem.value = '';
+          txtMensagem.focus();
+          divMensagens.scrollTop = divMensagens.scrollHeight; // rolar pra baixo
+        });
+      </script>
     </body>
     </html>
   `;
@@ -130,12 +169,16 @@ app.post('/batepapo', protegePagina, async (req, res) => {
 
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem = '', assunto } = req.body;
-  if (!usuario || !assunto) return res.redirect('/batepapo.html');
+  if (!usuario || !assunto) {
+    return res.status(400).json({ erro: 'Dados incompletos' });
+  }
   const mensagens = await lerArquivoJSON('mensagens.json');
   mensagens.push({ usuario, mensagem, assunto, dataHora: new Date().toISOString() });
   await salvarArquivoJSON('mensagens.json', mensagens);
-  res.redirect(307, `/batepapo?nickname=${encodeURIComponent(usuario)}&assunto=${encodeURIComponent(assunto)}`);
+  const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
+  res.json({ mensagens: mensagensFiltradas });
 });
+
 
 app.get('/batepapo', protegePagina, async (req, res) => {
   const { nickname, assunto } = req.query;
