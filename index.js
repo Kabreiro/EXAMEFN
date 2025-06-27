@@ -81,10 +81,8 @@ app.get('/menu.html', protegePagina, (req, res) => {
 app.get('/batepapo', protegePagina, async (req, res) => {
   try {
     const usuarios = await lerArquivoJSON('usuarios.json');
-    console.log('Usuarios lidos:', usuarios);
-
+    // Extrai todos os assuntos únicos
     const assuntosUnicos = [...new Set(usuarios.map(u => u.assunto))];
-    console.log('Assuntos encontrados:', assuntosUnicos);
 
     const opcoes = assuntosUnicos.map(assunto => `<option value="${assunto}">${assunto}</option>`).join('\n');
 
