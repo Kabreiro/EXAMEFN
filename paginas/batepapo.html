@@ -8,14 +8,20 @@
   <h1>Entrar no Bate-papo</h1>
   <form method="POST" action="/entrarBatepapo">
     <label>
-      Digite seu nickname cadastrado:<br>
-      <input type="text" name="nickname" id="nickname" required />
+      Digite seu nickname:<br>
+      <input type="text" name="nickname" required placeholder="Seu nickname" />
     </label>
     <br><br>
     <label>
       Assunto:<br>
-      <select name="assunto" id="assunto" required>
-        <option value="">--Informe um nickname válido--</option>
+      <select name="assunto">
+        <option value="">--Selecione um assunto--</option>
+        <option value="Futebol">Futebol</option>
+        <option value="Games">Games</option>
+        <option value="Música">Música</option>
+        <option value="Filmes">Filmes</option>
+        <option value="Tecnologia">Tecnologia</option>
+        <option value="Outros">Outros</option>
       </select>
     </label>
     <br><br>
@@ -23,31 +29,5 @@
   </form>
   <br>
   <a href="/menu.html">Voltar ao menu</a>
-
-  <script>
-    const nicknameInput = document.getElementById('nickname');
-    const assuntoSelect = document.getElementById('assunto');
-
-    nicknameInput.addEventListener('blur', async () => {
-      const nickname = nicknameInput.value.trim();
-      if (!nickname) {
-        assuntoSelect.innerHTML = '<option value="">--Informe um nickname válido--</option>';
-        return;
-      }
-
-      try {
-        const res = await fetch(`/buscarAssunto?nickname=${encodeURIComponent(nickname)}`);
-        if (!res.ok) throw new Error('Nickname não encontrado');
-        const data = await res.json();
-        if (data.assunto) {
-          assuntoSelect.innerHTML = `<option value="${data.assunto}">${data.assunto}</option>`;
-        } else {
-          assuntoSelect.innerHTML = '<option value="">--Nenhum assunto encontrado--</option>';
-        }
-      } catch {
-        assuntoSelect.innerHTML = '<option value="">--Nickname inválido ou não cadastrado--</option>';
-      }
-    });
-  </script>
 </body>
 </html>
