@@ -6,9 +6,8 @@ const path = require('path');
 
 const app = express();
 
-// Middleware para interpretar JSON
+// Middleware para interpretar JSON e urlencoded em todas requisições POST
 app.use(express.json());
-// Middleware para interpretar urlencoded
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
@@ -82,10 +81,10 @@ app.get('/batepapo.html', protegePagina, (req, res) => {
       <h1>Entrar no Bate-papo</h1>
       <form method="POST" action="/batepapo">
         <label>Digite seu nickname:<br>
-          <input type="text" name="nickname">
+          <input type="text" name="nickname" required>
         </label><br><br>
         <label>Digite o assunto:<br>
-          <input type="text" name="assunto">
+          <input type="text" name="assunto" required>
         </label><br><br>
         <button>Entrar</button>
       </form>
@@ -112,7 +111,7 @@ function gerarPaginaBatePapo(nickname, assunto, mensagens) {
           <input type="text" name="usuario" value="${nickname}" readonly>
         </label><br><br>
         <label>Mensagem:<br>
-          <textarea name="mensagem" id="txtMensagem" rows="4" cols="50"></textarea>
+          <textarea name="mensagem" id="txtMensagem" rows="4" cols="50" required></textarea>
         </label><br><br>
         <button type="submit">Enviar</button>
       </form>
@@ -136,30 +135,33 @@ function gerarPaginaBatePapo(nickname, assunto, mensagens) {
           const assunto = form.assunto.value;
           const mensagem = txtMensagem.value;
 
-          const response = await fetch('/postarMensagem', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuario, assunto, mensagem })
-          });
+          try {
+            const response = await fetch('/postarMensagem', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ usuario, assunto, mensagem })
+            });
 
-          if (!response.ok) {
+            if (!response.ok) throw new Error('Erro no envio');
+
+            const data = await response.json();
+
+            if (data.mensagens.length === 0) {
+              divMensagens.innerHTML = '<p>Sem mensagens.</p>';
+            } else {
+              divMensagens.innerHTML = data.mensagens.map(m =>
+                \`<p><b>\${m.usuario}</b> [\${new Date(m.dataHora).toLocaleString()}]: \${m.mensagem}</p>\`
+              ).join('');
+            }
+
+            txtMensagem.value = '';
+            txtMensagem.focus();
+            divMensagens.scrollTop = divMensagens.scrollHeight;
+
+          } catch (err) {
             alert('Erro ao enviar mensagem.');
-            return;
+            console.error(err);
           }
-
-          const data = await response.json();
-
-          if (data.mensagens.length === 0) {
-            divMensagens.innerHTML = '<p>Sem mensagens.</p>';
-          } else {
-            divMensagens.innerHTML = data.mensagens.map(m =>
-              \`<p><b>\${m.usuario}</b> [\${new Date(m.dataHora).toLocaleString()}]: \${m.mensagem}</p>\`
-            ).join('');
-          }
-
-          txtMensagem.value = '';
-          txtMensagem.focus();
-          divMensagens.scrollTop = divMensagens.scrollHeight;
         });
       </script>
     </body>
