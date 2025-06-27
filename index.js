@@ -169,7 +169,7 @@ function gerarPaginaBatePapo(nickname, assunto, mensagens) {
 
 app.post('/batepapo', protegePagina, async (req, res) => {
   const { nickname, assunto } = req.body;
-  if (!nickname || !assunto) return res.send(`<h1>Dados incompletos</h1><a href="/batepapo.html">Voltar</a>`);
+  if (!nickname || !assunto) return res.redirect('/batepapo.html');
 
   const mensagens = await lerArquivoJSON('mensagens.json');
   res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
