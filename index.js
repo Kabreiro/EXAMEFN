@@ -46,7 +46,7 @@ app.post('/login', (req, res) => {
   const { usuario, senha } = req.body;
   if (usuario === LOGIN_FIXO.usuario && senha === LOGIN_FIXO.senha) {
     req.session.usuario = usuario;
-    res.cookie('ultimoAcesso', new Date().toISOString(), { maxAge: 30 * 60 * 1000, httpOnly: true });
+    res.cookie('ultimoAcesso', new Date().toISOString(), { maxAge: 30 * 60 * 1000 });
     res.redirect('/menu.html');  // menu.html será servido estático
   } else {
     res.send('<h1>Login inválido</h1><a href="/login.html">Voltar</a>');
