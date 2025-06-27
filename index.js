@@ -178,8 +178,9 @@ app.get('/batepapo.html', protegePagina, async (req, res) => {
 
 // Rota POST batepapo (sem mudanças)
 
-aapp.post('/batepapo', protegePagina, async (req, res) => {
+app.post('/batepapo', protegePagina, async (req, res) => {
   const { nickname } = req.body;
+
   if (!nickname || nickname.trim() === '') {
     return res.send(`
       <h1>Erro</h1>
@@ -189,7 +190,7 @@ aapp.post('/batepapo', protegePagina, async (req, res) => {
   }
 
   const usuarios = await lerArquivoJSON('usuarios.json');
-  const usuario = usuarios.find(u => u.nickname === nickname);
+  const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.toLowerCase());
 
   if (!usuario) {
     return res.send(`
@@ -201,11 +202,12 @@ aapp.post('/batepapo', protegePagina, async (req, res) => {
 
   const assunto = usuario.assunto;
 
+  // Usuários que têm o mesmo assunto
+  const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
+
+  // Carrega mensagens do assunto
   const mensagens = await lerArquivoJSON('mensagens.json');
   const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
-
-  // Só usuários com o mesmo assunto
-  const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
 
   res.send(`
     <!DOCTYPE html>
@@ -217,16 +219,24 @@ aapp.post('/batepapo', protegePagina, async (req, res) => {
     <body>
       <h1>Bate-papo: ${assunto}</h1>
       <form method="POST" action="/postarMensagem">
-        <input type="hidden" name="assunto" value="${assunto}">
+        <input type="hidden" name="assunto" value="${assunto}" />
+        <label>Assunto:
+          <select name="assunto" disabled>
+            <option selected value="${assunto}">${assunto}</option>
+          </select>
+        </label>
+        <br><br>
         <label>Usuário:
           <select name="usuario" required>
             <option value="">--Selecione usuário--</option>
-            ${usuariosDoAssunto.map(u => `<option value="${u.nickname}"${u.nickname === nickname ? ' selected' : ''}>${u.nome} (${u.nickname})</option>`).join('')}
+            ${usuariosDoAssunto.map(u => `<option value="${u.nickname}"${u.nickname === usuario.nickname ? ' selected' : ''}>${u.nome} (${u.nickname})</option>`).join('')}
           </select>
-        </label><br><br>
+        </label>
+        <br><br>
         <label>Mensagem:<br>
           <textarea name="mensagem" rows="4" cols="50" required></textarea>
-        </label><br><br>
+        </label>
+        <br><br>
         <button>Enviar</button>
       </form>
       <hr>
@@ -240,8 +250,6 @@ aapp.post('/batepapo', protegePagina, async (req, res) => {
     </html>
   `);
 });
-
-// Rota postar mensagem (sem mudanças)
 
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem, assunto } = req.body;
