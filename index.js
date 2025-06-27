@@ -193,8 +193,7 @@ app.post('/batepapo', protegePagina, async (req, res) => {
     `);
   }
 
-  // Aqui removi a validação do assunto para permitir que o usuário entre no assunto que quiser
-  // Porém você pode optar por validar que o usuário tenha cadastro no assunto escolhido (opcional)
+  // Removi a validação que bloqueava o acesso ao assunto
 
   const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
   const mensagens = await lerArquivoJSON('mensagens.json');
@@ -233,7 +232,9 @@ app.post('/batepapo', protegePagina, async (req, res) => {
   `);
 });
 
-aapp.post('/postarMensagem', protegePagina, async (req, res) => {
+// POST postarMensagem: salva a mensagem SEM validar nickname/assunto, só verifica campos não vazios
+
+app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem, assunto } = req.body;
 
   if (!usuario || !mensagem || !assunto || mensagem.trim() === '') {
@@ -253,6 +254,7 @@ aapp.post('/postarMensagem', protegePagina, async (req, res) => {
   });
   await salvarArquivoJSON('mensagens.json', mensagens);
 
+  // Redireciona para GET /batepapo com nickname e assunto para recarregar a conversa
   res.redirect(307, `/batepapo?nickname=${encodeURIComponent(usuario)}&assunto=${encodeURIComponent(assunto)}`);
 });
 
