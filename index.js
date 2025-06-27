@@ -134,9 +134,13 @@ app.get('/batepapo.html', protegePagina, (req, res) => {
     <head><meta charset="UTF-8" /><title>Entrar no Bate-papo</title></head>
     <body>
       <h1>Entrar no Bate-papo</h1>
-      <form method="POST" action="/entrarBatepapo">
-        <label>Digite seu nickname cadastrado:<br>
+      <form method="POST" action="/batepapo">
+        <label>Digite seu nickname:<br>
           <input type="text" name="nickname" required />
+        </label>
+        <br><br>
+        <label>Digite o assunto:<br>
+          <input type="text" name="assunto" required />
         </label>
         <br><br>
         <button>Entrar</button>
@@ -148,28 +152,15 @@ app.get('/batepapo.html', protegePagina, (req, res) => {
   `);
 });
 
-app.post('/entrarBatepapo', protegePagina, async (req, res) => {
-  const { nickname } = req.body;
+app.post('/batepapo', protegePagina, async (req, res) => {
+  const { nickname, assunto } = req.body;
 
-  if (!nickname || !nickname.trim()) {
-    return res.send(`<h1>Nickname inválido</h1><a href="/batepapo.html">Voltar</a>`);
+  if (!nickname || !assunto) {
+    return res.send(`<h1>Dados incompletos</h1><a href="/batepapo.html">Voltar</a>`);
   }
-
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.trim().toLowerCase());
-
-  if (!usuario) {
-    return res.send(`
-      <h1>Nickname não cadastrado</h1>
-      <p>Por favor, digite um nickname cadastrado.</p>
-      <a href="/batepapo.html">Voltar</a>
-    `);
-  }
-
-  const assunto = usuario.assunto;
 
   const mensagens = await lerArquivoJSON('mensagens.json');
-  const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
+  const mensagensDoAssunto = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
 
   res.send(`
     <!DOCTYPE html>
@@ -180,7 +171,7 @@ app.post('/entrarBatepapo', protegePagina, async (req, res) => {
       <form method="POST" action="/postarMensagem">
         <input type="hidden" name="assunto" value="${assunto}" />
         <label>Usuário:
-          <input type="text" name="usuario" value="${usuario.nickname}" readonly />
+          <input type="text" name="usuario" value="${nickname}" />
         </label>
         <br><br>
         <label>Mensagem:<br>
@@ -228,7 +219,7 @@ app.get('/batepapo', protegePagina, async (req, res) => {
   }
 
   const mensagens = await lerArquivoJSON('mensagens.json');
-  const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
+  const mensagensDoAssunto = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
 
   res.send(`
     <!DOCTYPE html>
@@ -239,7 +230,7 @@ app.get('/batepapo', protegePagina, async (req, res) => {
       <form method="POST" action="/postarMensagem">
         <input type="hidden" name="assunto" value="${assunto}" />
         <label>Usuário:
-          <input type="text" name="usuario" value="${nickname}" readonly />
+          <input type="text" name="usuario" value="${nickname}" />
         </label>
         <br><br>
         <label>Mensagem:<br>
@@ -258,41 +249,6 @@ app.get('/batepapo', protegePagina, async (req, res) => {
     </body>
     </html>
   `);
-});
-
-app.get('/buscarAssunto', protegePagina, async (req, res) => {
-  const { nickname } = req.query;
-  if (!nickname) {
-    console.log('Nickname não informado na requisição');
-    return res.status(400).json({ erro: 'Nickname não informado' });
-  }
-
-  try {
-    const usuarios = await lerArquivoJSON('usuarios.json');
-    console.log('usuarios lidos:', usuarios);
-
-    if (!usuarios || usuarios.length === 0) {
-      console.log('Arquivo usuarios.json está vazio ou não carregou');
-      return res.status(500).json({ erro: 'Arquivo de usuários vazio ou inválido' });
-    }
-
-    const usuario = usuarios.find(u => {
-      console.log(`Comparando ${u.nickname.toLowerCase()} com ${nickname.toLowerCase()}`);
-      return u.nickname.toLowerCase() === nickname.toLowerCase();
-    });
-
-    if (!usuario) {
-      console.log(`Usuário com nickname "${nickname}" não encontrado`);
-      return res.status(404).json({ erro: 'Nickname não encontrado' });
-    }
-
-    console.log(`Usuário encontrado: ${JSON.stringify(usuario)}`);
-
-    res.json({ assunto: usuario.assunto });
-  } catch (erro) {
-    console.error('Erro lendo usuarios.json:', erro);
-    res.status(500).json({ erro: 'Erro interno ao ler usuários' });
-  }
 });
 
 app.get('/', (req, res) => res.redirect('/login.html'));
