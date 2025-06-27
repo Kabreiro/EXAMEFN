@@ -269,16 +269,24 @@ app.get('/buscarAssunto', protegePagina, async (req, res) => {
 
   try {
     const usuarios = await lerArquivoJSON('usuarios.json');
+    console.log('usuarios lidos:', usuarios);
+
     if (!usuarios || usuarios.length === 0) {
       console.log('Arquivo usuarios.json está vazio ou não carregou');
       return res.status(500).json({ erro: 'Arquivo de usuários vazio ou inválido' });
     }
 
-    const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.toLowerCase());
+    const usuario = usuarios.find(u => {
+      console.log(`Comparando ${u.nickname.toLowerCase()} com ${nickname.toLowerCase()}`);
+      return u.nickname.toLowerCase() === nickname.toLowerCase();
+    });
+
     if (!usuario) {
       console.log(`Usuário com nickname "${nickname}" não encontrado`);
       return res.status(404).json({ erro: 'Nickname não encontrado' });
     }
+
+    console.log(`Usuário encontrado: ${JSON.stringify(usuario)}`);
 
     res.json({ assunto: usuario.assunto });
   } catch (erro) {
@@ -286,7 +294,6 @@ app.get('/buscarAssunto', protegePagina, async (req, res) => {
     res.status(500).json({ erro: 'Erro interno ao ler usuários' });
   }
 });
-
 
 app.get('/', (req, res) => res.redirect('/login.html'));
 
