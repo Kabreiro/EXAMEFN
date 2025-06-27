@@ -185,7 +185,8 @@ app.get('/batepapo', protegePagina, async (req, res) => {
 
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem = '', assunto } = req.body;
-  if (!usuario || !assunto) return res.send(`<h1>Dados incompletos</h1><a href="/batepapo.html">Voltar</a>`);
+
+  if (!usuario || !assunto) return res.redirect('/batepapo.html');
 
   const mensagens = await lerArquivoJSON('mensagens.json');
   mensagens.push({ usuario, mensagem, assunto, dataHora: new Date().toISOString() });
