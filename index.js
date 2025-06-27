@@ -59,59 +59,13 @@ app.get('/menu.html', protegePagina, (req, res) => {
   const mensagem = ultimoAcesso
     ? `Último acesso: ${new Date(ultimoAcesso).toLocaleString('pt-BR')}`
     : 'Último acesso: não disponível.';
-
   res.send(`
     <h1>Menu do Sistema</h1>
     <p>${mensagem}</p>
     <ul>
-      <li><a href="/cadastroUsuario.html">Cadastro de Usuários</a></li>
       <li><a href="/batepapo.html">Bate-papo</a></li>
       <li><a href="/logout">Logout</a></li>
     </ul>
-  `);
-});
-
-app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
-  const { nome, dataNascimento, nickname, assunto } = req.body;
-  const erros = [];
-
-  if (!nome?.trim()) erros.push('Nome é obrigatório.');
-  if (!dataNascimento?.trim()) erros.push('Data de nascimento é obrigatória.');
-  if (!nickname?.trim()) erros.push('Nickname é obrigatório.');
-  if (!assunto?.trim()) erros.push('Assunto preferido é obrigatório.');
-
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  if (usuarios.find(u => u.nickname.toLowerCase() === nickname.trim().toLowerCase())) {
-    erros.push('Nickname já cadastrado.');
-  }
-
-  if (erros.length > 0) {
-    return res.send(`
-      <h1>Erros no cadastro</h1>
-      <ul>${erros.map(e => `<li>${e}</li>`).join('')}</ul>
-      <a href="/cadastroUsuario.html">Voltar</a>
-    `);
-  }
-
-  usuarios.push({ nome, dataNascimento, nickname, assunto });
-  await salvarArquivoJSON('usuarios.json', usuarios);
-
-  res.send(`
-    <h1>Usuários cadastrados</h1>
-    <table border="1" cellpadding="5">
-      <thead><tr><th>Nome</th><th>Data</th><th>Nickname</th><th>Assunto</th></tr></thead>
-      <tbody>
-        ${usuarios.map(u => `
-          <tr>
-            <td>${u.nome}</td>
-            <td>${u.dataNascimento}</td>
-            <td>${u.nickname}</td>
-            <td>${u.assunto}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>
-    <br><a href="/cadastroUsuario.html">Cadastrar outro usuário</a><br>
-    <a href="/menu.html">Voltar ao menu</a>
   `);
 });
 
@@ -170,29 +124,24 @@ function gerarPaginaBatePapo(nickname, assunto, mensagens) {
 app.post('/batepapo', protegePagina, async (req, res) => {
   const { nickname, assunto } = req.body;
   if (!nickname || !assunto) return res.redirect('/batepapo.html');
-
-  const mensagens = await lerArquivoJSON('mensagens.json');
-  res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
-});
-
-app.get('/batepapo', protegePagina, async (req, res) => {
-  const { nickname, assunto } = req.query;
-  if (!nickname || !assunto) return res.redirect('/batepapo.html');
-
   const mensagens = await lerArquivoJSON('mensagens.json');
   res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
 });
 
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem = '', assunto } = req.body;
-
   if (!usuario || !assunto) return res.redirect('/batepapo.html');
-
   const mensagens = await lerArquivoJSON('mensagens.json');
   mensagens.push({ usuario, mensagem, assunto, dataHora: new Date().toISOString() });
   await salvarArquivoJSON('mensagens.json', mensagens);
-
   res.redirect(307, `/batepapo?nickname=${encodeURIComponent(usuario)}&assunto=${encodeURIComponent(assunto)}`);
+});
+
+app.get('/batepapo', protegePagina, async (req, res) => {
+  const { nickname, assunto } = req.query;
+  if (!nickname || !assunto) return res.redirect('/batepapo.html');
+  const mensagens = await lerArquivoJSON('mensagens.json');
+  res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
 });
 
 app.get('/', (req, res) => res.redirect('/login.html'));
