@@ -7,20 +7,20 @@
 <body>
   <h1>Cadastro de Usuário</h1>
   <form method="POST" action="/cadastrarUsuario">
-    <label>Nome: <input name="nome" required></label><br><br>
-    <label>Data de Nascimento: <input type="date" name="dataNascimento" required></label><br><br>
-    <label>Nickname: <input name="nickname" required></label><br><br>
-    <label>Assunto preferido:
-      <select name="assunto" required>
-        <option value="">--Selecione--</option>
-        <option value="Futebol">Futebol</option>
-        <option value="Games">Games</option>
-        <option value="Carros">Carros</option>
-        <option value="Música">Música</option>
-      </select>
-    </label><br><br>
-    <button>Cadastrar</button>
-  </form>
+  <label>Nome: <input type="text" name="nome" required></label><br><br>
+  <label>E-mail: <input type="email" name="email" required></label><br><br>
+  <label>Senha: <input type="password" name="senha" required></label><br><br>
+  <label>Assunto preferido:
+    <select name="assunto" required>
+      <option value="">--Selecione--</option>
+      <option value="Futebol">Futebol</option>
+      <option value="Games">Games</option>
+      <option value="Carros">Carros</option>
+      <option value="Música">Música</option>
+    </select>
+  </label><br><br>
+  <button type="submit">Cadastrar</button>
+</form>
   <br>
   <a href="/menu.html">Voltar ao Menu</a>
 </body>

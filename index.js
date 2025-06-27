@@ -56,14 +56,12 @@ app.get('/logout', protegePagina, (req, res) => {
 });
 
 app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
-  const { nome, email, senha, dataNascimento, nickname, assunto } = req.body;
+  const { nome, email, senha, assunto } = req.body;
 
   const erros = [];
   if (!nome || !nome.trim()) erros.push('Nome é obrigatório.');
   if (!email || !email.trim()) erros.push('E-mail é obrigatório.');
   if (!senha || !senha.trim()) erros.push('Senha é obrigatória.');
-  if (!dataNascimento || !dataNascimento.trim()) erros.push('Data de nascimento é obrigatória.');
-  if (!nickname || !nickname.trim()) erros.push('Nickname é obrigatório.');
   if (!assunto || !assunto.trim()) erros.push('Assunto preferido é obrigatório.');
 
   if (erros.length) {
@@ -83,15 +81,8 @@ app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
       <a href="/cadastroUsuario.html">Voltar</a>
     `);
   }
-  if (usuarios.find(u => u.nickname === nickname)) {
-    return res.send(`
-      <h1>Erro</h1>
-      <p>Nickname já cadastrado.</p>
-      <a href="/cadastroUsuario.html">Voltar</a>
-    `);
-  }
 
-  usuarios.push({ nome, email, senha, dataNascimento, nickname, assunto });
+  usuarios.push({ nome, email, senha, assunto });
   await salvarArquivoJSON('usuarios.json', usuarios);
 
   res.send(`
@@ -99,7 +90,7 @@ app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
     <table border="1" cellpadding="5">
       <thead>
         <tr>
-          <th>Nome</th><th>E-mail</th><th>Data de Nascimento</th><th>Nickname</th><th>Assunto</th>
+          <th>Nome</th><th>E-mail</th><th>Assunto</th>
         </tr>
       </thead>
       <tbody>
@@ -107,8 +98,6 @@ app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
           `<tr>
             <td>${u.nome}</td>
             <td>${u.email}</td>
-            <td>${u.dataNascimento}</td>
-            <td>${u.nickname}</td>
             <td>${u.assunto}</td>
           </tr>`).join('')}
       </tbody>
@@ -118,6 +107,7 @@ app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
     <a href="/menu.html">Voltar ao menu</a>
   `);
 });
+
 
 app.post('/batepapo', protegePagina, async (req, res) => {
   const { assunto } = req.body;
