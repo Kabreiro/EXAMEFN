@@ -3,55 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <title>Entrar no Bate-papo</title>
-  <script>
-    async function buscarAssunto() {
-      const nickname = document.getElementById('nickname').value.trim();
-      const assuntoInput = document.getElementById('assunto');
-
-      if (!nickname) {
-        assuntoInput.value = '';
-        assuntoInput.disabled = true;
-        return;
-      }
-
-      try {
-        const response = await fetch(`/buscarAssunto?nickname=${encodeURIComponent(nickname)}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.assunto) {
-            assuntoInput.value = data.assunto;
-            assuntoInput.disabled = false;
-          } else {
-            assuntoInput.value = '';
-            assuntoInput.disabled = true;
-          }
-        } else {
-          assuntoInput.value = '';
-          assuntoInput.disabled = true;
-        }
-      } catch (error) {
-        assuntoInput.value = '';
-        assuntoInput.disabled = true;
-      }
-    }
-  </script>
 </head>
 <body>
   <h1>Entrar no Bate-papo</h1>
-  <form method="POST" action="/batepapo">
+  <form method="POST" action="/entrarBatepapo">
     <label>
       Seu Nickname:
-      <input type="text" id="nickname" name="nickname" required placeholder="Digite seu nickname cadastrado" onblur="buscarAssunto()" />
+      <input type="text" name="nickname" id="nickname" required placeholder="Digite seu nickname cadastrado" />
     </label>
     <br><br>
     <label>
       Assunto:
-      <input type="text" id="assunto" name="assunto" readonly placeholder="Assunto será preenchido automaticamente" disabled />
+      <input type="text" name="assunto" id="assunto" readonly placeholder="Assunto será carregado aqui" />
     </label>
     <br><br>
     <button>Entrar</button>
   </form>
   <br>
   <a href="/menu.html">Voltar ao menu</a>
+
+  <script>
+    const inputNickname = document.getElementById('nickname');
+    const inputAssunto = document.getElementById('assunto');
+
+    inputNickname.addEventListener('blur', async () => {
+      const nickname = inputNickname.value.trim();
+      if (!nickname) {
+        inputAssunto.value = '';
+        return;
+      }
+      try {
+        const response = await fetch(`/buscarAssunto?nickname=${encodeURIComponent(nickname)}`);
+        if (!response.ok) throw new Error('Não encontrado');
+        const data = await response.json();
+        inputAssunto.value = data.assunto || 'Nickname não encontrado';
+      } catch {
+        inputAssunto.value = 'Erro ao buscar assunto';
+      }
+    });
+  </script>
 </body>
 </html>
