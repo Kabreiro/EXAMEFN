@@ -263,20 +263,30 @@ app.get('/batepapo', protegePagina, async (req, res) => {
 app.get('/buscarAssunto', protegePagina, async (req, res) => {
   const { nickname } = req.query;
   if (!nickname) {
+    console.log('Nickname não informado na requisição');
     return res.status(400).json({ erro: 'Nickname não informado' });
   }
 
   try {
     const usuarios = await lerArquivoJSON('usuarios.json');
+    if (!usuarios || usuarios.length === 0) {
+      console.log('Arquivo usuarios.json está vazio ou não carregou');
+      return res.status(500).json({ erro: 'Arquivo de usuários vazio ou inválido' });
+    }
+
     const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.toLowerCase());
     if (!usuario) {
+      console.log(`Usuário com nickname "${nickname}" não encontrado`);
       return res.status(404).json({ erro: 'Nickname não encontrado' });
     }
+
     res.json({ assunto: usuario.assunto });
-  } catch {
+  } catch (erro) {
+    console.error('Erro lendo usuarios.json:', erro);
     res.status(500).json({ erro: 'Erro interno ao ler usuários' });
   }
 });
+
 
 app.get('/', (req, res) => res.redirect('/login.html'));
 
