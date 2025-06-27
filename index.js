@@ -43,9 +43,7 @@ app.post('/login', (req, res) => {
   const { usuario, senha } = req.body;
   if (usuario === LOGIN_FIXO.usuario && senha === LOGIN_FIXO.senha) {
     req.session.usuario = usuario;
-    // Atualiza o cookie do último acesso antes de enviar a página menu
     const agora = new Date().toISOString();
-    // Envia cookie com a hora atual e também armazena no req.session para mostrar já no menu sem esperar próxima requisição
     res.cookie('ultimoAcesso', agora, { maxAge: 30 * 60 * 1000, httpOnly: true });
     res.redirect('/menu.html');
   } else {
@@ -58,7 +56,6 @@ app.get('/logout', protegePagina, (req, res) => {
 });
 
 app.get('/menu.html', protegePagina, (req, res) => {
-  // Pega o cookie ultimoAcesso para mostrar no menu
   const ultimoAcesso = req.cookies.ultimoAcesso;
   let mensagem = 'Último acesso: não disponível.';
   if (ultimoAcesso) {
@@ -78,7 +75,7 @@ app.get('/menu.html', protegePagina, (req, res) => {
   `);
 });
 
-// Cadastro usuário (sem alterações)
+// Cadastro de usuário (sem mudanças)
 
 app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
   const { nome, dataNascimento, nickname, assunto } = req.body;
@@ -132,21 +129,17 @@ app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
   `);
 });
 
-// Rota batepapo.html - agora gera dinamicamente o select com assuntos únicos cadastrados
+// Página batepapo.html: gera select com assuntos cadastrados dinamicamente
 
 app.get('/batepapo.html', protegePagina, async (req, res) => {
   try {
     const usuarios = await lerArquivoJSON('usuarios.json');
-    // Extrai os assuntos únicos dos usuários cadastrados
     const assuntosUnicos = [...new Set(usuarios.map(u => u.assunto))];
 
     res.send(`
       <!DOCTYPE html>
       <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8" />
-        <title>Sala de Bate-papo</title>
-      </head>
+      <head><meta charset="UTF-8" /><title>Sala de Bate-papo</title></head>
       <body>
         <h1>Sala de Bate-papo</h1>
         <form method="POST" action="/batepapo">
@@ -170,11 +163,13 @@ app.get('/batepapo.html', protegePagina, async (req, res) => {
       </body>
       </html>
     `);
-  } catch (error) {
-    console.error('Erro ao carregar batepapo:', error);
+  } catch (err) {
+    console.error(err);
     res.status(500).send('Erro interno do servidor');
   }
 });
+
+// POST batepapo: exibe chat com usuários e mensagens do assunto
 
 app.post('/batepapo', protegePagina, async (req, res) => {
   const { nickname, assunto } = req.body;
@@ -198,13 +193,8 @@ app.post('/batepapo', protegePagina, async (req, res) => {
     `);
   }
 
-  if (usuario.assunto !== assunto) {
-    return res.send(`
-      <h1>Erro</h1>
-      <p>O assunto selecionado não corresponde ao assunto cadastrado do usuário.</p>
-      <a href="/batepapo.html">Voltar</a>
-    `);
-  }
+  // Aqui removi a validação do assunto para permitir que o usuário entre no assunto que quiser
+  // Porém você pode optar por validar que o usuário tenha cadastro no assunto escolhido (opcional)
 
   const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
   const mensagens = await lerArquivoJSON('mensagens.json');
@@ -213,10 +203,7 @@ app.post('/batepapo', protegePagina, async (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html lang="pt-BR">
-    <head>
-      <meta charset="UTF-8" />
-      <title>Bate-papo - ${assunto}</title>
-    </head>
+    <head><meta charset="UTF-8" /><title>Bate-papo - ${assunto}</title></head>
     <body>
       <h1>Bate-papo: ${assunto}</h1>
       <form method="POST" action="/postarMensagem">
@@ -246,6 +233,8 @@ app.post('/batepapo', protegePagina, async (req, res) => {
   `);
 });
 
+// POST postarMensagem: apenas salva mensagem sem revalidar nickname e assunto
+
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem, assunto } = req.body;
 
@@ -257,16 +246,7 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
     `);
   }
 
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
-  const usuarioValido = usuariosDoAssunto.find(u => u.nickname === usuario);
-  if (!usuarioValido) {
-    return res.send(`
-      <h1>Erro ao postar mensagem</h1>
-      <p>Nickname inválido para o assunto escolhido.</p>
-      <a href="/batepapo.html">Voltar</a>
-    `);
-  }
+  // Aqui NÃO validamos nickname e assunto para poder enviar mensagens livremente
 
   const mensagens = await lerArquivoJSON('mensagens.json');
   mensagens.push({
@@ -277,8 +257,66 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
   });
   await salvarArquivoJSON('mensagens.json', mensagens);
 
-  // Redireciona para a rota POST /batepapo para recarregar mensagens com mesmo assunto e usuário
-  res.redirect(307, '/batepapo');
+  // Redireciona para POST /batepapo para recarregar a conversa com usuário e assunto corretos
+  // Passando nickname e assunto via query string para facilitar o res.redirect
+  res.redirect(307, `/batepapo?nickname=${encodeURIComponent(usuario)}&assunto=${encodeURIComponent(assunto)}`);
+});
+
+// Alteração no GET /batepapo para permitir passar nickname e assunto por query string e mostrar o chat
+
+app.get('/batepapo', protegePagina, async (req, res) => {
+  const { nickname, assunto } = req.query;
+
+  if (!nickname || !assunto || nickname.trim() === '' || assunto.trim() === '') {
+    return res.redirect('/batepapo.html');
+  }
+
+  const usuarios = await lerArquivoJSON('usuarios.json');
+  const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.toLowerCase());
+
+  if (!usuario) {
+    return res.send(`
+      <h1>Erro</h1>
+      <p>Nickname não encontrado.</p>
+      <a href="/batepapo.html">Voltar</a>
+    `);
+  }
+
+  const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
+  const mensagens = await lerArquivoJSON('mensagens.json');
+  const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
+
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head><meta charset="UTF-8" /><title>Bate-papo - ${assunto}</title></head>
+    <body>
+      <h1>Bate-papo: ${assunto}</h1>
+      <form method="POST" action="/postarMensagem">
+        <input type="hidden" name="assunto" value="${assunto}" />
+        <label>Usuário:
+          <select name="usuario" required>
+            <option value="">--Selecione usuário--</option>
+            ${usuariosDoAssunto.map(u => `<option value="${u.nickname}"${u.nickname === usuario.nickname ? ' selected' : ''}>${u.nome} (${u.nickname})</option>`).join('')}
+          </select>
+        </label>
+        <br><br>
+        <label>Mensagem:<br>
+          <textarea name="mensagem" rows="4" cols="50" required></textarea>
+        </label>
+        <br><br>
+        <button>Enviar</button>
+      </form>
+      <hr>
+      <h2>Mensagens</h2>
+      <div style="border:1px solid #ccc; height:300px; overflow-y:auto; padding:5px;">
+        ${mensagensDoAssunto.length === 0 ? '<p>Sem mensagens.</p>' : mensagensDoAssunto.map(m => `<p><b>${m.usuario}</b> [${new Date(m.dataHora).toLocaleString()}]: ${m.mensagem}</p>`).join('')}
+      </div>
+      <br>
+      <a href="/batepapo.html">Voltar à seleção de usuário</a> | <a href="/menu.html">Menu</a>
+    </body>
+    </html>
+  `);
 });
 
 app.get('/', (req, res) => res.redirect('/login.html'));
