@@ -260,17 +260,21 @@ app.get('/batepapo', protegePagina, async (req, res) => {
   `);
 });
 
-app.get('/buscarAssunto', async (req, res) => {
+app.get('/buscarAssunto', protegePagina, async (req, res) => {
   const { nickname } = req.query;
-  if (!nickname) return res.json({ assunto: null });
+  if (!nickname) {
+    return res.status(400).json({ erro: 'Nickname não informado' });
+  }
 
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.toLowerCase());
-
-  if (usuario) {
+  try {
+    const usuarios = await lerArquivoJSON('usuarios.json');
+    const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.toLowerCase());
+    if (!usuario) {
+      return res.status(404).json({ erro: 'Nickname não encontrado' });
+    }
     res.json({ assunto: usuario.assunto });
-  } else {
-    res.json({ assunto: null });
+  } catch {
+    res.status(500).json({ erro: 'Erro interno ao ler usuários' });
   }
 });
 
