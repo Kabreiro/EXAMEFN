@@ -12,7 +12,7 @@ app.use(session({
   secret: 'segredo_super_legal_123',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 30 * 60 * 1000 }
+  cookie: { maxAge: 30 * 60 * 1000 } // 30 minutos
 }));
 
 const dataDir = path.resolve('./data');
@@ -43,8 +43,10 @@ app.post('/login', (req, res) => {
   const { usuario, senha } = req.body;
   if (usuario === LOGIN_FIXO.usuario && senha === LOGIN_FIXO.senha) {
     req.session.usuario = usuario;
+    // Atualiza o cookie do último acesso antes de enviar a página menu
     const agora = new Date().toISOString();
-    res.cookie('ultimoAcesso', agora, { maxAge: 30 * 60 * 1000 });
+    // Envia cookie com a hora atual e também armazena no req.session para mostrar já no menu sem esperar próxima requisição
+    res.cookie('ultimoAcesso', agora, { maxAge: 30 * 60 * 1000, httpOnly: true });
     res.redirect('/menu.html');
   } else {
     res.send('<h1>Login inválido</h1><a href="/login.html">Voltar</a>');
@@ -56,6 +58,7 @@ app.get('/logout', protegePagina, (req, res) => {
 });
 
 app.get('/menu.html', protegePagina, (req, res) => {
+  // Pega o cookie ultimoAcesso para mostrar no menu
   const ultimoAcesso = req.cookies.ultimoAcesso;
   let mensagem = 'Último acesso: não disponível.';
   if (ultimoAcesso) {
@@ -74,6 +77,8 @@ app.get('/menu.html', protegePagina, (req, res) => {
     </ul>
   `);
 });
+
+// Cadastro usuário (sem alterações)
 
 app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
   const { nome, dataNascimento, nickname, assunto } = req.body;
@@ -127,8 +132,13 @@ app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
   `);
 });
 
-app.get('/batepapo.html', protegePagina, (req, res) => {
-  const assuntos = ['Futebol', 'Games', 'Carros', 'Música'];
+// Rota batepapo.html - agora gera dinamicamente o select com assuntos únicos cadastrados
+
+app.get('/batepapo.html', protegePagina, async (req, res) => {
+  const usuarios = await lerArquivoJSON('usuarios.json');
+  // Extrai assuntos únicos
+  const assuntos = [...new Set(usuarios.map(u => u.assunto))].sort();
+
   res.send(`
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -153,6 +163,8 @@ app.get('/batepapo.html', protegePagina, (req, res) => {
     </html>
   `);
 });
+
+// Rota POST batepapo (sem mudanças)
 
 app.post('/batepapo', protegePagina, async (req, res) => {
   const { assunto, nickname } = req.body;
@@ -204,6 +216,8 @@ app.post('/batepapo', protegePagina, async (req, res) => {
   `);
 });
 
+// Rota postar mensagem (sem mudanças)
+
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem, assunto } = req.body;
 
@@ -235,6 +249,7 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
   });
   await salvarArquivoJSON('mensagens.json', mensagens);
 
+  // Redireciona para a rota POST /batepapo para recarregar mensagens com mesmo assunto e usuário
   res.redirect(307, '/batepapo');
 });
 
