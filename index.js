@@ -95,20 +95,40 @@ app.get('/batepapo.html', protegePagina, (req, res) => {
 });
 
 app.post('/batepapo', protegePagina, async (req, res) => {
-  const { assunto } = req.body;
-  if (!assunto) return res.redirect('/batepapo.html');
+  const { assunto, nickname } = req.body;
+
+  if (!assunto || !nickname || nickname.trim() === '') {
+    return res.send(`
+      <h1>Erro</h1>
+      <p>Assunto e nickname são obrigatórios.</p>
+      <a href="/batepapo.html">Voltar</a>
+    `);
+  }
+
   const usuarios = await lerArquivoJSON('usuarios.json');
   const mensagens = await lerArquivoJSON('mensagens.json');
+
+  const usuarioSelecionado = usuarios.find(u => u.nickname === nickname && u.assunto === assunto);
+  if (!usuarioSelecionado) {
+    return res.send(`
+      <h1>Erro</h1>
+      <p>Nickname inválido para o assunto selecionado.</p>
+      <a href="/batepapo.html">Voltar</a>
+    `);
+  }
+
   const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
   const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
 
   res.send(`
     <h1>Bate-papo: ${assunto}</h1>
-    <p>Usuários cadastrados para este assunto: ${usuariosDoAssunto.map(u => u.nickname).join(', ')}</p>
     <form method="POST" action="/postarMensagem">
       <input type="hidden" name="assunto" value="${assunto}">
-      <label>Nickname do Usuário:
-        <input type="text" name="usuario" placeholder="Digite seu nickname" required>
+      <label>Usuário:
+        <select name="usuario" required>
+          <option value="">--Selecione usuário--</option>
+          ${usuariosDoAssunto.map(u => `<option value="${u.nickname}"${u.nickname === nickname ? ' selected' : ''}>${u.nome} (${u.nickname})</option>`).join('')}
+        </select>
       </label><br><br>
       <label>Mensagem:<br>
         <textarea name="mensagem" rows="4" cols="50" required></textarea>
