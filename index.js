@@ -262,28 +262,58 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
 app.post('/batepapo', protegePagina, async (req, res) => {
   const { nickname, assunto } = req.body;
 
-  if (!nickname || !assunto || nickname.trim() === '' || assunto.trim() === '') {
-    return res.send(`
-      <h1>Erro</h1>
-      <p>Nickname e assunto são obrigatórios.</p>
-      <a href="/batepapo.html">Voltar</a>
-    `);
-  }
+  // REMOVIDA qualquer validação obrigatória de nickname e assunto
+  // Se quiser, pode checar se vazio e redirecionar, mas deixei liberado
 
-  const usuarios = await lerArquivoJSON('usuarios.json');
   const mensagens = await lerArquivoJSON('mensagens.json');
-  const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
+  const mensagensDoAssunto = assunto ? mensagens.filter(m => m.assunto === assunto) : [];
 
   res.send(`
     <!DOCTYPE html>
     <html lang="pt-BR">
-    <head><meta charset="UTF-8" /><title>Bate-papo - ${assunto}</title></head>
+    <head><meta charset="UTF-8" /><title>Bate-papo - ${assunto || 'Sem Assunto'}</title></head>
     <body>
-      <h1>Bate-papo: ${assunto}</h1>
+      <h1>Bate-papo: ${assunto || 'Sem Assunto'}</h1>
       <form method="POST" action="/postarMensagem">
-        <input type="hidden" name="assunto" value="${assunto}" />
+        <input type="hidden" name="assunto" value="${assunto || ''}" />
         <label>Usuário:
-          <input type="text" name="usuario" value="${nickname}" required />
+          <input type="text" name="usuario" value="${nickname || ''}" required />
+        </label>
+        <br><br>
+        <label>Mensagem:<br>
+          <textarea name="mensagem" rows="4" cols="50" required></textarea>
+        </label>
+        <br><br>
+        <button>Enviar</button>
+      </form>
+      <hr>
+      <h2>Mensagens</h2>
+      <div style="border:1px solid #ccc; height:300px; overflow-y:auto; padding:5px;">
+        ${mensagensDoAssunto.length === 0 ? '<p>Sem mensagens.</p>' : mensagensDoAssunto.map(m => `<p><b>${m.usuario}</b> [${new Date(m.dataHora).toLocaleString()}]: ${m.mensagem}</p>`).join('')}
+      </div>
+      <br>
+      <a href="/batepapo.html">Voltar à seleção de usuário</a> | <a href="/menu.html">Menu</a>
+    </body>
+    </html>
+  `);
+});
+
+app.get('/batepapo', protegePagina, async (req, res) => {
+  const { nickname, assunto } = req.query;
+
+  const mensagens = await lerArquivoJSON('mensagens.json');
+  const mensagensDoAssunto = assunto ? mensagens.filter(m => m.assunto === assunto) : [];
+
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head><meta charset="UTF-8" /><title>Bate-papo - ${assunto || 'Sem Assunto'}</title></head>
+    <body>
+      <h1>Bate-papo: ${assunto || 'Sem Assunto'}</h1>
+      <form method="POST" action="/postarMensagem">
+        <input type="hidden" name="assunto" value="${assunto || ''}" />
+        <label>Usuário:
+          <input type="text" name="usuario" value="${nickname || ''}" required />
         </label>
         <br><br>
         <label>Mensagem:<br>
