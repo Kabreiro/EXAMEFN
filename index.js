@@ -337,14 +337,6 @@ app.get('/batepapo', protegePagina, async (req, res) => {
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem, assunto } = req.body;
 
-  if (!usuario || !mensagem || !assunto || mensagem.trim() === '') {
-    return res.send(`
-      <h1>Erro ao postar mensagem</h1>
-      <p>Nickname, mensagem e assunto são obrigatórios, e a mensagem não pode estar vazia.</p>
-      <a href="/batepapo.html">Voltar</a>
-    `);
-  }
-
   const mensagens = await lerArquivoJSON('mensagens.json');
   mensagens.push({
     usuario,
@@ -356,7 +348,6 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
 
   res.redirect(307, `/batepapo?nickname=${encodeURIComponent(usuario)}&assunto=${encodeURIComponent(assunto)}`);
 });
-
 
 app.get('/batepapo', protegePagina, async (req, res) => {
   const { nickname, assunto } = req.query;
