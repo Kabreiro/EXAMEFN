@@ -6,7 +6,10 @@ const path = require('path');
 
 const app = express();
 
+// Middleware para interpretar application/x-www-form-urlencoded
+// É importante aplicar globalmente para pegar todos os POSTs
 app.use(express.urlencoded({ extended: true }));
+
 app.use(cookieParser());
 app.use(session({
   secret: 'segredo_super_legal_123',
@@ -152,7 +155,7 @@ function gerarPaginaBatePapo(nickname, assunto, mensagens) {
 
           txtMensagem.value = '';
           txtMensagem.focus();
-          divMensagens.scrollTop = divMensagens.scrollHeight; // rolar pra baixo
+          divMensagens.scrollTop = divMensagens.scrollHeight;
         });
       </script>
     </body>
@@ -169,10 +172,6 @@ app.post('/batepapo', protegePagina, async (req, res) => {
 
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   try {
-    await new Promise((resolve, reject) => {
-      express.urlencoded({ extended: true })(req, res, err => err ? reject(err) : resolve());
-    });
-
     const { usuario, mensagem = '', assunto } = req.body;
 
     if (!usuario || !assunto) {
