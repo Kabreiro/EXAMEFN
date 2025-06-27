@@ -124,10 +124,10 @@ app.get('/batepapo.html', protegePagina, (req, res) => {
       <h1>Entrar no Bate-papo</h1>
       <form method="POST" action="/batepapo">
         <label>Digite seu nickname:<br>
-          <input type="text" name="nickname">
+          <input type="text" name="nickname" required>
         </label><br><br>
         <label>Digite o assunto:<br>
-          <input type="text" name="assunto">
+          <input type="text" name="assunto" required>
         </label><br><br>
         <button>Entrar</button>
       </form>
