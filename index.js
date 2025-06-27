@@ -167,18 +167,21 @@ app.post('/batepapo', protegePagina, async (req, res) => {
   res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
 });
 
-app.post('/postarMensagem', protegePagina, async (req, res) => {
-  const { usuario, mensagem = '', assunto } = req.body;
-  if (!usuario || !assunto) {
-    return res.status(400).json({ erro: 'Dados incompletos' });
+app.post('/postarMensagem', protegePagina, express.urlencoded({ extended: true }), async (req, res) => {
+  try {
+    const { usuario, mensagem = '', assunto } = req.body;
+    if (!usuario || !assunto) {
+      return res.status(400).json({ erro: 'Dados incompletos' });}
+    const mensagens = await lerArquivoJSON('mensagens.json');
+    mensagens.push({ usuario, mensagem, assunto, dataHora: new Date().toISOString() });
+    await salvarArquivoJSON('mensagens.json', mensagens);
+    const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
+    return res.json({ mensagens: mensagensFiltradas });
+  } catch (error) {
+    console.error('Erro em /postarMensagem:', error);
+    return res.status(500).json({ erro: 'Erro interno no servidor' });
   }
-  const mensagens = await lerArquivoJSON('mensagens.json');
-  mensagens.push({ usuario, mensagem, assunto, dataHora: new Date().toISOString() });
-  await salvarArquivoJSON('mensagens.json', mensagens);
-  const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
-  res.json({ mensagens: mensagensFiltradas });
 });
-
 
 app.get('/batepapo', protegePagina, async (req, res) => {
   const { nickname, assunto } = req.query;
