@@ -41,82 +41,30 @@ function protegePagina(req, res, next) {
 
 app.use(express.static(path.join(__dirname, 'paginas')));
 
+// POST login: seta sessão e cookie de último acesso
 app.post('/login', (req, res) => {
   const { usuario, senha } = req.body;
   if (usuario === LOGIN_FIXO.usuario && senha === LOGIN_FIXO.senha) {
     req.session.usuario = usuario;
     res.cookie('ultimoAcesso', new Date().toISOString(), { maxAge: 30 * 60 * 1000, httpOnly: true });
-    res.redirect('/menu.html');
+    res.redirect('/menu.html');  // menu.html será servido estático
   } else {
     res.send('<h1>Login inválido</h1><a href="/login.html">Voltar</a>');
   }
 });
 
+// GET logout: destrói sessão
 app.get('/logout', protegePagina, (req, res) => {
   req.session.destroy(() => res.redirect('/login.html'));
 });
 
-app.get('/menu.html', protegePagina, (req, res) => {
-  const ultimoAcesso = req.cookies.ultimoAcesso;
-  const mensagem = ultimoAcesso
-    ? `Último acesso: ${new Date(ultimoAcesso).toLocaleString('pt-BR')}`
-    : 'Último acesso: não disponível.';
-
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-      <meta charset="UTF-8" />
-      <title>Menu da Sala de Bate-papo</title>
-    </head>
-    <body>
-      <h1>Menu da Sala de Bate-papo</h1>
-      <p>${mensagem}</p>
-      <ul>
-        <li><a href="/cadastro.html">Cadastro de Usuários</a></li>
-        <li><a href="/batepapo.html">Bate-papo</a></li>
-      </ul>
-      <a href="/logout">Logout</a>
-    </body>
-    </html>
-  `);
-});
-
-app.get('/batepapo.html', protegePagina, (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head><meta charset="UTF-8"><title>Entrar no Bate-papo</title></head>
-    <body>
-      <h1>Entrar no Bate-papo</h1>
-      <form method="POST" action="/batepapo">
-        <label>Digite seu nickname:<br>
-          <input type="text" name="nickname" required>
-        </label><br><br>
-        <label>Digite o assunto:<br>
-          <input type="text" name="assunto" required>
-        </label><br><br>
-        <button>Entrar</button>
-      </form>
-      <br><a href="/menu.html">Voltar ao menu</a>
-    </body>
-    </html>
-  `);
-});
-
+// Cadastro de usuários - exibir e cadastrar
 app.get('/cadastroUsuarios', protegePagina, async (req, res) => {
   const usuarios = await lerArquivoJSON('usuarios.json');
   let tabela = `<table border="1" cellpadding="5" cellspacing="0">
-    <thead>
-      <tr>
-        <th>Nome</th>
-        <th>Email</th>
-        <th>Nickname</th>
-        <th>Data de Nascimento</th>
-        <th>Assunto</th>
-      </tr>
-    </thead>
-    <tbody>`;
+    <thead><tr>
+      <th>Nome</th><th>Email</th><th>Nickname</th><th>Data de Nascimento</th><th>Assunto</th>
+    </tr></thead><tbody>`;
 
   for (const u of usuarios) {
     tabela += `<tr>
@@ -130,10 +78,7 @@ app.get('/cadastroUsuarios', protegePagina, async (req, res) => {
   tabela += '</tbody></table>';
 
   res.send(`
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head><meta charset="UTF-8"><title>Cadastro de Usuários</title></head>
-    <body>
+    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Cadastro de Usuários</title></head><body>
       <h1>Cadastro de Usuários</h1>
       <form method="POST" action="/cadastroUsuarios">
         <label>Nome:<br><input type="text" name="nome" required></label><br><br>
@@ -156,9 +101,7 @@ app.get('/cadastroUsuarios', protegePagina, async (req, res) => {
       <h2>Usuários cadastrados</h2>
       ${tabela}
       <br><a href="/menu.html">Voltar ao menu</a>
-    </body>
-    </html>
-  `);
+    </body></html>`);
 });
 
 app.post('/cadastroUsuarios', protegePagina, async (req, res) => {
@@ -169,23 +112,22 @@ app.post('/cadastroUsuarios', protegePagina, async (req, res) => {
   }
 
   const usuarios = await lerArquivoJSON('usuarios.json');
+  const existe = usuarios.some(u => u.email === email || u.nickname === nickname);
+  if (existe) {
+    return res.send('<h1>Usuário com email ou nickname já cadastrado</h1><a href="/cadastroUsuarios">Voltar</a>');
+  }
+
   usuarios.push({ nome, email, senha, nickname, dataNascimento, assunto });
   await salvarArquivoJSON('usuarios.json', usuarios);
 
   res.redirect('/cadastroUsuarios');
 });
 
-
+// Bate-papo
 function gerarPaginaBatePapo(nickname, assunto, mensagens) {
   const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
   return `
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-      <meta charset="UTF-8">
-      <title>Bate-papo - ${assunto}</title>
-    </head>
-    <body>
+    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Bate-papo - ${assunto}</title></head><body>
       <h1>Bate-papo: ${assunto}</h1>
       <form id="formMensagem">
         <input type="hidden" name="assunto" value="${assunto}">
@@ -246,9 +188,7 @@ function gerarPaginaBatePapo(nickname, assunto, mensagens) {
           }
         });
       </script>
-    </body>
-    </html>
-  `;
+    </body></html>`;
 }
 
 app.post('/batepapo', protegePagina, async (req, res) => {
@@ -285,8 +225,10 @@ app.get('/batepapo', protegePagina, async (req, res) => {
   res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
 });
 
+// Redireciona raiz para login
 app.get('/', (req, res) => res.redirect('/login.html'));
 
+// 404 fallback
 app.use((req, res) => {
   res.status(404).send('<h1>404 - Página não encontrada</h1><a href="/login.html">Login</a>');
 });
