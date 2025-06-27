@@ -258,25 +258,19 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
   res.redirect(307, `/batepapo?nickname=${encodeURIComponent(usuario)}&assunto=${encodeURIComponent(assunto)}`);
 });
 
-app.get('/batepapo', protegePagina, async (req, res) => {
-  const { nickname, assunto } = req.query;
+
+app.post('/batepapo', protegePagina, async (req, res) => {
+  const { nickname, assunto } = req.body;
 
   if (!nickname || !assunto || nickname.trim() === '' || assunto.trim() === '') {
-    return res.redirect('/batepapo.html');
-  }
-
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.toLowerCase());
-
-  if (!usuario) {
     return res.send(`
       <h1>Erro</h1>
-      <p>Nickname não encontrado.</p>
+      <p>Nickname e assunto são obrigatórios.</p>
       <a href="/batepapo.html">Voltar</a>
     `);
   }
 
-  const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
+  const usuarios = await lerArquivoJSON('usuarios.json');
   const mensagens = await lerArquivoJSON('mensagens.json');
   const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
 
@@ -289,10 +283,71 @@ app.get('/batepapo', protegePagina, async (req, res) => {
       <form method="POST" action="/postarMensagem">
         <input type="hidden" name="assunto" value="${assunto}" />
         <label>Usuário:
-          <select name="usuario" required>
-            <option value="">--Selecione usuário--</option>
-            ${usuariosDoAssunto.map(u => `<option value="${u.nickname}"${u.nickname === usuario.nickname ? ' selected' : ''}>${u.nome} (${u.nickname})</option>`).join('')}
-          </select>
+          <input type="text" name="usuario" value="${nickname}" required />
+        </label>
+        <br><br>
+        <label>Mensagem:<br>
+          <textarea name="mensagem" rows="4" cols="50" required></textarea>
+        </label>
+        <br><br>
+        <button>Enviar</button>
+      </form>
+      <hr>
+      <h2>Mensagens</h2>
+      <div style="border:1px solid #ccc; height:300px; overflow-y:auto; padding:5px;">
+        ${mensagensDoAssunto.length === 0 ? '<p>Sem mensagens.</p>' : mensagensDoAssunto.map(m => `<p><b>${m.usuario}</b> [${new Date(m.dataHora).toLocaleString()}]: ${m.mensagem}</p>`).join('')}
+      </div>
+      <br>
+      <a href="/batepapo.html">Voltar à seleção de usuário</a> | <a href="/menu.html">Menu</a>
+    </body>
+    </html>
+  `);
+});
+
+app.post('/postarMensagem', protegePagina, async (req, res) => {
+  const { usuario, mensagem, assunto } = req.body;
+
+  if (!usuario || !mensagem || !assunto || mensagem.trim() === '') {
+    return res.send(`
+      <h1>Erro ao postar mensagem</h1>
+      <p>Nickname, mensagem e assunto são obrigatórios, e a mensagem não pode estar vazia.</p>
+      <a href="/batepapo.html">Voltar</a>
+    `);
+  }
+
+  const mensagens = await lerArquivoJSON('mensagens.json');
+  mensagens.push({
+    usuario,
+    mensagem,
+    assunto,
+    dataHora: new Date().toISOString()
+  });
+  await salvarArquivoJSON('mensagens.json', mensagens);
+
+  res.redirect(307, `/batepapo?nickname=${encodeURIComponent(usuario)}&assunto=${encodeURIComponent(assunto)}`);
+});
+
+
+app.get('/batepapo', protegePagina, async (req, res) => {
+  const { nickname, assunto } = req.query;
+
+  if (!nickname || !assunto || nickname.trim() === '' || assunto.trim() === '') {
+    return res.redirect('/batepapo.html');
+  }
+
+  const mensagens = await lerArquivoJSON('mensagens.json');
+  const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
+
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head><meta charset="UTF-8" /><title>Bate-papo - ${assunto}</title></head>
+    <body>
+      <h1>Bate-papo: ${assunto}</h1>
+      <form method="POST" action="/postarMensagem">
+        <input type="hidden" name="assunto" value="${assunto}" />
+        <label>Usuário:
+          <input type="text" name="usuario" value="${nickname}" required />
         </label>
         <br><br>
         <label>Mensagem:<br>
