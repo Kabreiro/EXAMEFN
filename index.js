@@ -6,7 +6,6 @@ const path = require('path');
 
 const app = express();
 
-// Middleware para interpretar JSON e urlencoded em todas requisições POST
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -73,14 +72,25 @@ app.get('/menu.html', protegePagina, (req, res) => {
   }
 
   res.send(`
-    <h1>Menu do Sistema</h1>
-    <p>${mensagem}</p>
-    <ul>
-      <li><a href="/batepapo.html">Bate-papo</a></li>
-      <li><a href="/logout">Logout</a></li>
-    </ul>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Menu da Sala de Bate-papo</title>
+    </head>
+    <body>
+      <h1>Menu da Sala de Bate-papo</h1>
+      <p>${mensagem}</p>
+      <ul>
+        <li><a href="/cadastro.html">Cadastro de Usuários</a></li>
+        <li><a href="/batepapo.html">Bate-papo</a></li>
+      </ul>
+      <a href="/logout">Logout</a>
+    </body>
+    </html>
   `);
 });
+
 
 app.get('/batepapo.html', protegePagina, (req, res) => {
   res.send(`
