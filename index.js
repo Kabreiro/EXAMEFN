@@ -147,6 +147,7 @@ app.post('/cadastroUsuarios', protegePagina, async (req, res) => {
   res.redirect('/cadastroUsuarios');
 });
 
+
 function gerarPaginaBatePapo(nickname, assunto, mensagens) {
   const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
   return `
