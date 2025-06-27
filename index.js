@@ -134,83 +134,110 @@ app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
 
 // Rota batepapo.html - agora gera dinamicamente o select com assuntos únicos cadastrados
 
-app.get('/batepapo.html', protegePagina, (req, res) => {
-  const assuntos = ['Futebol', 'Games', 'Carros', 'Música'];
+app.get('/batepapo.html', protegePagina, async (req, res) => {
+  try {
+    const usuarios = await lerArquivoJSON('usuarios.json');
+    // Extrai os assuntos únicos dos usuários cadastrados
+    const assuntosUnicos = [...new Set(usuarios.map(u => u.assunto))];
 
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head><meta charset="UTF-8"><title>Seleção de Bate-papo</title></head>
-    <body>
-      <h1>Selecione o Assunto do Bate-papo</h1>
-      <form method="POST" action="/batepapo">
-        <label>Assunto:
-          <select name="assunto" required>
-            <option value="">--Selecione--</option>
-            ${assuntos.map(a => `<option value="${a}">${a}</option>`).join('')}
-          </select>
-        </label><br><br>
-        <label>Nickname:
-          <input type="text" name="nickname" required />
-        </label><br><br>
-        <button>Entrar</button>
-      </form>
-      <br>
-      <a href="/menu.html">Voltar ao menu</a>
-    </body>
-    </html>
-  `);
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Sala de Bate-papo</title>
+      </head>
+      <body>
+        <h1>Sala de Bate-papo</h1>
+        <form method="POST" action="/batepapo">
+          <label>
+            Seu Nickname:
+            <input type="text" name="nickname" required placeholder="Digite seu nickname" />
+          </label>
+          <br><br>
+          <label>
+            Escolha um assunto:
+            <select name="assunto" required>
+              <option value="">--Selecione--</option>
+              ${assuntosUnicos.map(a => `<option value="${a}">${a}</option>`).join('')}
+            </select>
+          </label>
+          <br><br>
+          <button>Ver mensagens</button>
+        </form>
+        <br>
+        <a href="/menu.html">Voltar ao menu</a>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Erro ao carregar batepapo:', error);
+    res.status(500).send('Erro interno do servidor');
+  }
 });
 
 // Rota POST batepapo (sem mudanças)
 
-app.post('/batepapo', protegePagina, async (req, res) => {
-  const { assunto, nickname } = req.body;
-  if (!assunto || !nickname || nickname.trim() === '') {
+aapp.post('/batepapo', protegePagina, async (req, res) => {
+  const { nickname } = req.body;
+  if (!nickname || nickname.trim() === '') {
     return res.send(`
       <h1>Erro</h1>
-      <p>Assunto e nickname são obrigatórios.</p>
+      <p>Nickname é obrigatório.</p>
       <a href="/batepapo.html">Voltar</a>
     `);
   }
 
   const usuarios = await lerArquivoJSON('usuarios.json');
-  const mensagens = await lerArquivoJSON('mensagens.json');
+  const usuario = usuarios.find(u => u.nickname === nickname);
 
-  const usuarioValido = usuarios.find(u => u.nickname === nickname && u.assunto === assunto);
-  if (!usuarioValido) {
+  if (!usuario) {
     return res.send(`
       <h1>Erro</h1>
-      <p>Nickname inválido para o assunto selecionado.</p>
+      <p>Nickname não encontrado.</p>
       <a href="/batepapo.html">Voltar</a>
     `);
   }
 
-  const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
+  const assunto = usuario.assunto;
+
+  const mensagens = await lerArquivoJSON('mensagens.json');
   const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
 
+  // Só usuários com o mesmo assunto
+  const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
+
   res.send(`
-    <h1>Bate-papo: ${assunto}</h1>
-    <form method="POST" action="/postarMensagem">
-      <input type="hidden" name="assunto" value="${assunto}">
-      <label>Usuário:
-        <select name="usuario" required>
-          <option value="">--Selecione usuário--</option>
-          ${usuariosDoAssunto.map(u => `<option value="${u.nickname}"${u.nickname === nickname ? ' selected' : ''}>${u.nome} (${u.nickname})</option>`).join('')}
-        </select>
-      </label><br><br>
-      <label>Mensagem:<br>
-        <textarea name="mensagem" rows="4" cols="50" required></textarea>
-      </label><br><br>
-      <button>Enviar</button>
-    </form>
-    <hr>
-    <h2>Mensagens</h2>
-    <div style="border:1px solid #ccc; height:300px; overflow-y:auto; padding:5px;">
-      ${mensagensDoAssunto.length === 0 ? '<p>Sem mensagens.</p>' : mensagensDoAssunto.map(m => `<p><b>${m.usuario}</b> [${new Date(m.dataHora).toLocaleString('pt-BR')}]: ${m.mensagem}</p>`).join('')}
-    </div>
-    <br>
-    <a href="/batepapo.html">Voltar à seleção de assunto</a> | <a href="/menu.html">Menu</a>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Bate-papo - ${assunto}</title>
+    </head>
+    <body>
+      <h1>Bate-papo: ${assunto}</h1>
+      <form method="POST" action="/postarMensagem">
+        <input type="hidden" name="assunto" value="${assunto}">
+        <label>Usuário:
+          <select name="usuario" required>
+            <option value="">--Selecione usuário--</option>
+            ${usuariosDoAssunto.map(u => `<option value="${u.nickname}"${u.nickname === nickname ? ' selected' : ''}>${u.nome} (${u.nickname})</option>`).join('')}
+          </select>
+        </label><br><br>
+        <label>Mensagem:<br>
+          <textarea name="mensagem" rows="4" cols="50" required></textarea>
+        </label><br><br>
+        <button>Enviar</button>
+      </form>
+      <hr>
+      <h2>Mensagens</h2>
+      <div style="border:1px solid #ccc; height:300px; overflow-y:auto; padding:5px;">
+        ${mensagensDoAssunto.length === 0 ? '<p>Sem mensagens.</p>' : mensagensDoAssunto.map(m => `<p><b>${m.usuario}</b> [${new Date(m.dataHora).toLocaleString()}]: ${m.mensagem}</p>`).join('')}
+      </div>
+      <br>
+      <a href="/batepapo.html">Voltar à seleção de usuário</a> | <a href="/menu.html">Menu</a>
+    </body>
+    </html>
   `);
 });
 
