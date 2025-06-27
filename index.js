@@ -176,15 +176,13 @@ app.get('/batepapo.html', protegePagina, async (req, res) => {
   }
 });
 
-// Rota POST batepapo (sem mudanças)
-
 app.post('/batepapo', protegePagina, async (req, res) => {
-  const { nickname } = req.body;
+  const { nickname, assunto } = req.body;
 
-  if (!nickname || nickname.trim() === '') {
+  if (!nickname || !assunto || nickname.trim() === '' || assunto.trim() === '') {
     return res.send(`
       <h1>Erro</h1>
-      <p>Nickname é obrigatório.</p>
+      <p>Nickname e assunto são obrigatórios.</p>
       <a href="/batepapo.html">Voltar</a>
     `);
   }
@@ -200,12 +198,15 @@ app.post('/batepapo', protegePagina, async (req, res) => {
     `);
   }
 
-  const assunto = usuario.assunto;
+  if (usuario.assunto !== assunto) {
+    return res.send(`
+      <h1>Erro</h1>
+      <p>O assunto selecionado não corresponde ao assunto cadastrado do usuário.</p>
+      <a href="/batepapo.html">Voltar</a>
+    `);
+  }
 
-  // Usuários que têm o mesmo assunto
   const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
-
-  // Carrega mensagens do assunto
   const mensagens = await lerArquivoJSON('mensagens.json');
   const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
 
@@ -220,12 +221,6 @@ app.post('/batepapo', protegePagina, async (req, res) => {
       <h1>Bate-papo: ${assunto}</h1>
       <form method="POST" action="/postarMensagem">
         <input type="hidden" name="assunto" value="${assunto}" />
-        <label>Assunto:
-          <select name="assunto" disabled>
-            <option selected value="${assunto}">${assunto}</option>
-          </select>
-        </label>
-        <br><br>
         <label>Usuário:
           <select name="usuario" required>
             <option value="">--Selecione usuário--</option>
