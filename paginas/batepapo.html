@@ -8,13 +8,15 @@
   <h1>Entrar no Bate-papo</h1>
   <form method="POST" action="/entrarBatepapo">
     <label>
-      Seu Nickname:
-      <input type="text" name="nickname" id="nickname" required placeholder="Digite seu nickname cadastrado" />
+      Digite seu nickname cadastrado:<br>
+      <input type="text" name="nickname" id="nickname" required />
     </label>
     <br><br>
     <label>
-      Assunto:
-      <input type="text" name="assunto" id="assunto" readonly placeholder="Assunto será carregado aqui" />
+      Assunto:<br>
+      <select name="assunto" id="assunto" required>
+        <option value="">--Informe um nickname válido--</option>
+      </select>
     </label>
     <br><br>
     <button>Entrar</button>
@@ -23,22 +25,27 @@
   <a href="/menu.html">Voltar ao menu</a>
 
   <script>
-    const inputNickname = document.getElementById('nickname');
-    const inputAssunto = document.getElementById('assunto');
+    const nicknameInput = document.getElementById('nickname');
+    const assuntoSelect = document.getElementById('assunto');
 
-    inputNickname.addEventListener('blur', async () => {
-      const nickname = inputNickname.value.trim();
+    nicknameInput.addEventListener('blur', async () => {
+      const nickname = nicknameInput.value.trim();
       if (!nickname) {
-        inputAssunto.value = '';
+        assuntoSelect.innerHTML = '<option value="">--Informe um nickname válido--</option>';
         return;
       }
+
       try {
-        const response = await fetch(`/buscarAssunto?nickname=${encodeURIComponent(nickname)}`);
-        if (!response.ok) throw new Error('Não encontrado');
-        const data = await response.json();
-        inputAssunto.value = data.assunto || 'Nickname não encontrado';
+        const res = await fetch(`/buscarAssunto?nickname=${encodeURIComponent(nickname)}`);
+        if (!res.ok) throw new Error('Nickname não encontrado');
+        const data = await res.json();
+        if (data.assunto) {
+          assuntoSelect.innerHTML = `<option value="${data.assunto}">${data.assunto}</option>`;
+        } else {
+          assuntoSelect.innerHTML = '<option value="">--Nenhum assunto encontrado--</option>';
+        }
       } catch {
-        inputAssunto.value = 'Erro ao buscar assunto';
+        assuntoSelect.innerHTML = '<option value="">--Nickname inválido ou não cadastrado--</option>';
       }
     });
   </script>
