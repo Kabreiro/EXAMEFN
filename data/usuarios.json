@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "nome": "joao",
+    "email": "admin@email.com",
+    "senha": "1234",
+    "dataNascimento": "2003-10-13",
+    "nickname": "HaRd",
+    "assunto": "Games"
+  }
+]

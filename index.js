@@ -55,90 +55,60 @@ app.get('/logout', protegePagina, (req, res) => {
   req.session.destroy(() => res.redirect('/login.html'));
 });
 
-app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
-  const { nome, email, senha, dataNascimento, nickname, assunto } = req.body;
-
-  const erros = [];
-  if (!nome || !nome.trim()) erros.push('Nome é obrigatório.');
-  if (!email || !email.trim()) erros.push('E-mail é obrigatório.');
-  if (!senha || !senha.trim()) erros.push('Senha é obrigatória.');
-  if (!dataNascimento || !dataNascimento.trim()) erros.push('Data de nascimento é obrigatória.');
-  if (!nickname || !nickname.trim()) erros.push('Nickname é obrigatório.');
-  if (!assunto || !assunto.trim()) erros.push('Assunto preferido é obrigatório.');
-
-  if (erros.length) {
-    return res.send(`
-      <h1>Erros no cadastro</h1>
-      <ul>${erros.map(e => `<li>${e}</li>`).join('')}</ul>
-      <a href="/cadastroUsuario.html">Voltar</a>
-    `);
+app.get('/menu.html', protegePagina, (req, res) => {
+  const ultimoAcesso = req.cookies.ultimoAcesso;
+  let mensagem = 'Último acesso: não disponível.';
+  if (ultimoAcesso) {
+    const data = new Date(ultimoAcesso);
+    mensagem = `Último acesso: ${data.toLocaleString()}`;
   }
-
-  const usuarios = await lerArquivoJSON('usuarios.json');
-
-  if (usuarios.find(u => u.email === email)) {
-    return res.send(`
-      <h1>Erro</h1>
-      <p>E-mail já cadastrado.</p>
-      <a href="/cadastroUsuario.html">Voltar</a>
-    `);
-  }
-  if (usuarios.find(u => u.nickname === nickname)) {
-    return res.send(`
-      <h1>Erro</h1>
-      <p>Nickname já cadastrado.</p>
-      <a href="/cadastroUsuario.html">Voltar</a>
-    `);
-  }
-
-  usuarios.push({ nome, email, senha, dataNascimento, nickname, assunto });
-  await salvarArquivoJSON('usuarios.json', usuarios);
 
   res.send(`
-    <h1>Usuários cadastrados</h1>
-    <table border="1" cellpadding="5">
-      <thead>
-        <tr>
-          <th>Nome</th><th>E-mail</th><th>Data de Nascimento</th><th>Nickname</th><th>Assunto</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${usuarios.map(u =>
-          `<tr>
-            <td>${u.nome}</td>
-            <td>${u.email}</td>
-            <td>${u.dataNascimento}</td>
-            <td>${u.nickname}</td>
-            <td>${u.assunto}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>
-    <br>
-    <a href="/cadastroUsuario.html">Cadastrar outro usuário</a><br>
-    <a href="/menu.html">Voltar ao menu</a>
+    <h1>Menu do Sistema</h1>
+    <p>${mensagem}</p>
+    <ul>
+      <li><a href="/cadastroUsuario.html">Cadastro de Usuários</a></li>
+      <li><a href="/batepapo.html">Bate-papo</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
   `);
 });
 
+app.get('/batepapo.html', protegePagina, (req, res) => {
+  res.send(`
+    <h1>Selecione o Assunto do Bate-papo</h1>
+    <form method="POST" action="/batepapo">
+      <label>Assunto:
+        <select name="assunto" required>
+          <option value="">--Selecione--</option>
+          <option value="Futebol">Futebol</option>
+          <option value="Games">Games</option>
+          <option value="Carros">Carros</option>
+          <option value="Música">Música</option>
+        </select>
+      </label><br><br>
+      <button>Entrar no Bate-papo</button>
+    </form>
+    <br>
+    <a href="/menu.html">Voltar ao Menu</a>
+  `);
+});
 
 app.post('/batepapo', protegePagina, async (req, res) => {
   const { assunto } = req.body;
   if (!assunto) return res.redirect('/batepapo.html');
-
   const usuarios = await lerArquivoJSON('usuarios.json');
   const mensagens = await lerArquivoJSON('mensagens.json');
-
   const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
   const mensagensDoAssunto = mensagens.filter(m => m.assunto === assunto);
 
   res.send(`
     <h1>Bate-papo: ${assunto}</h1>
+    <p>Usuários cadastrados para este assunto: ${usuariosDoAssunto.map(u => u.nickname).join(', ')}</p>
     <form method="POST" action="/postarMensagem">
       <input type="hidden" name="assunto" value="${assunto}">
-      <label>Usuário:
-        <select name="usuario" required>
-          <option value="">--Selecione usuário--</option>
-          ${usuariosDoAssunto.map(u => `<option value="${u.nickname}">${u.nome} (${u.nickname})</option>`).join('')}
-        </select>
+      <label>Nickname do Usuário:
+        <input type="text" name="usuario" placeholder="Digite seu nickname" required>
       </label><br><br>
       <label>Mensagem:<br>
         <textarea name="mensagem" rows="4" cols="50" required></textarea>
@@ -163,7 +133,19 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
   if (!usuario || !mensagem || !assunto || mensagem.trim() === '') {
     return res.send(`
       <h1>Erro ao postar mensagem</h1>
-      <p>Usuário, mensagem e assunto são obrigatórios, e a mensagem não pode estar vazia.</p>
+      <p>Nickname, mensagem e assunto são obrigatórios, e a mensagem não pode estar vazia.</p>
+      <a href="/batepapo.html">Voltar</a>
+    `);
+  }
+
+  const usuarios = await lerArquivoJSON('usuarios.json');
+  const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
+
+  const usuarioValido = usuariosDoAssunto.find(u => u.nickname === usuario);
+  if (!usuarioValido) {
+    return res.send(`
+      <h1>Erro ao postar mensagem</h1>
+      <p>Nickname inválido para o assunto escolhido.</p>
       <a href="/batepapo.html">Voltar</a>
     `);
   }
@@ -177,7 +159,7 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
   });
   await salvarArquivoJSON('mensagens.json', mensagens);
 
-  res.redirect(307, '/batepapo.html');
+  res.redirect(307, '/batepapo');
 });
 
 app.get('/', (req, res) => res.redirect('/login.html'));
