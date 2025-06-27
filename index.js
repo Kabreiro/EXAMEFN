@@ -167,14 +167,22 @@ app.post('/batepapo', protegePagina, async (req, res) => {
   res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
 });
 
-app.post('/postarMensagem', protegePagina, express.urlencoded({ extended: true }), async (req, res) => {
+app.post('/postarMensagem', protegePagina, async (req, res) => {
   try {
+    await new Promise((resolve, reject) => {
+      express.urlencoded({ extended: true })(req, res, err => err ? reject(err) : resolve());
+    });
+
     const { usuario, mensagem = '', assunto } = req.body;
+
     if (!usuario || !assunto) {
-      return res.status(400).json({ erro: 'Dados incompletos' });}
+      return res.status(400).json({ erro: 'Dados incompletos' });
+    }
+
     const mensagens = await lerArquivoJSON('mensagens.json');
     mensagens.push({ usuario, mensagem, assunto, dataHora: new Date().toISOString() });
     await salvarArquivoJSON('mensagens.json', mensagens);
+
     const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
     return res.json({ mensagens: mensagensFiltradas });
   } catch (error) {
