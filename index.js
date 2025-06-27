@@ -134,10 +134,8 @@ app.post('/cadastrarUsuario', protegePagina, async (req, res) => {
 
 // Rota batepapo.html - agora gera dinamicamente o select com assuntos únicos cadastrados
 
-app.get('/batepapo.html', protegePagina, async (req, res) => {
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  // Extrai assuntos únicos
-  const assuntos = [...new Set(usuarios.map(u => u.assunto))].sort();
+app.get('/batepapo.html', protegePagina, (req, res) => {
+  const assuntos = ['Futebol', 'Games', 'Carros', 'Música'];
 
   res.send(`
     <!DOCTYPE html>
