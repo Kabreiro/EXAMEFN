@@ -6,11 +6,33 @@
 </head>
 <body>
   <h1>Menu da Sala de Bate-papo</h1>
-  <p>Último acesso:</p>
+  <p id="ultimoAcesso">Último acesso: carregando...</p>
   <ul>
     <li><a href="/cadastro.html">Cadastro de Usuários</a></li>
     <li><a href="/batepapo.html">Bate-papo</a></li>
   </ul>
   <a href="/logout">Logout</a>
+  <script>
+  function lerCookie(nome) {
+    const cookies = document.cookie.split('; ');
+    for (let c of cookies) {
+      if (c.startsWith(nome + '=')) {
+        return decodeURIComponent(c.split('=')[1]);
+      }
+    }
+    return null;
+  }
+
+  const ultimoAcesso = lerCookie('ultimoAcesso');
+  const p = document.getElementById('ultimoAcesso');
+
+  if (ultimoAcesso) {
+    const data = new Date(ultimoAcesso);
+    p.textContent = 'Último acesso: ' + data.toLocaleString('pt-BR');
+  } else {
+    p.textContent = 'Último acesso: não disponível.';
+  }
+</script>
+
 </body>
 </html>

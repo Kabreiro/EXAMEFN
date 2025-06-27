@@ -104,6 +104,49 @@ app.get('/batepapo.html', protegePagina, (req, res) => {
   `);
 });
 
+app.get('/cadastroUsuarios', protegePagina, async (req, res) => {
+  const usuarios = await lerArquivoJSON('usuarios.json');
+  let tabela = '<table border="1" cellpadding="5" cellspacing="0"><thead><tr><th>Nome</th><th>Email</th></tr></thead><tbody>';
+
+  for (const u of usuarios) {
+    tabela += `<tr><td>${u.nome}</td><td>${u.email}</td></tr>`;
+  }
+  tabela += '</tbody></table>';
+
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head><meta charset="UTF-8"><title>Cadastro de Usuários</title></head>
+    <body>
+      <h1>Cadastro de Usuários</h1>
+      <form method="POST" action="/cadastroUsuarios">
+        <label>Nome:<br><input type="text" name="nome" required></label><br><br>
+        <label>Email:<br><input type="email" name="email" required></label><br><br>
+        <button type="submit">Cadastrar</button>
+      </form>
+      <hr>
+      <h2>Usuários cadastrados</h2>
+      ${tabela}
+      <br><a href="/menu.html">Voltar ao menu</a>
+    </body>
+    </html>
+  `);
+});
+
+app.post('/cadastroUsuarios', protegePagina, async (req, res) => {
+  const { nome, email } = req.body;
+
+  if (!nome || !email) {
+    return res.send('<h1>Dados incompletos</h1><a href="/cadastroUsuarios">Voltar</a>');
+  }
+
+  const usuarios = await lerArquivoJSON('usuarios.json');
+  usuarios.push({ nome, email });
+  await salvarArquivoJSON('usuarios.json', usuarios);
+
+  res.redirect('/cadastroUsuarios');
+});
+
 function gerarPaginaBatePapo(nickname, assunto, mensagens) {
   const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
   return `
