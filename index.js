@@ -233,9 +233,7 @@ app.post('/batepapo', protegePagina, async (req, res) => {
   `);
 });
 
-// POST postarMensagem: apenas salva mensagem sem revalidar nickname e assunto
-
-app.post('/postarMensagem', protegePagina, async (req, res) => {
+aapp.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem, assunto } = req.body;
 
   if (!usuario || !mensagem || !assunto || mensagem.trim() === '') {
@@ -246,8 +244,6 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
     `);
   }
 
-  // Aqui NÃO validamos nickname e assunto para poder enviar mensagens livremente
-
   const mensagens = await lerArquivoJSON('mensagens.json');
   mensagens.push({
     usuario,
@@ -257,12 +253,8 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
   });
   await salvarArquivoJSON('mensagens.json', mensagens);
 
-  // Redireciona para POST /batepapo para recarregar a conversa com usuário e assunto corretos
-  // Passando nickname e assunto via query string para facilitar o res.redirect
   res.redirect(307, `/batepapo?nickname=${encodeURIComponent(usuario)}&assunto=${encodeURIComponent(assunto)}`);
 });
-
-// Alteração no GET /batepapo para permitir passar nickname e assunto por query string e mostrar o chat
 
 app.get('/batepapo', protegePagina, async (req, res) => {
   const { nickname, assunto } = req.query;
