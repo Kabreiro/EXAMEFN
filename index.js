@@ -260,6 +260,20 @@ app.get('/batepapo', protegePagina, async (req, res) => {
   `);
 });
 
+app.get('/buscarAssunto', async (req, res) => {
+  const { nickname } = req.query;
+  if (!nickname) return res.json({ assunto: null });
+
+  const usuarios = await lerArquivoJSON('usuarios.json');
+  const usuario = usuarios.find(u => u.nickname.toLowerCase() === nickname.toLowerCase());
+
+  if (usuario) {
+    res.json({ assunto: usuario.assunto });
+  } else {
+    res.json({ assunto: null });
+  }
+});
+
 app.get('/', (req, res) => res.redirect('/login.html'));
 
 app.use((req, res) => {
