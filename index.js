@@ -1,237 +1,190 @@
 const express = require('express');
 const session = require('express-session');
-const cookieParser = require('cookie-parser');
+const cookies = require('cookie-parser');
 const fs = require('fs').promises;
 const path = require('path');
 
-const app = express();
+const servidor = express();
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+servidor.use(express.json());
+servidor.use(express.urlencoded({ extended: true }));
 
-app.use(cookieParser());
-app.use(session({
-  secret: 'segredo_super_legal_123',
+servidor.use(cookies());
+servidor.use(session({
+  secret: 'chave_secreta_segura_456',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 30 * 60 * 1000 }
+  cookie: { maxAge: 1800000 }
 }));
 
-const dataDir = path.resolve('./data');
+const caminhoDados = path.join(__dirname, 'data');
 
-async function lerArquivoJSON(nomeArquivo) {
+async function carregarJSON(arquivo) {
   try {
-    const conteudo = await fs.readFile(path.join(dataDir, nomeArquivo), 'utf-8');
+    const conteudo = await fs.readFile(path.join(caminhoDados, arquivo), 'utf-8');
     return JSON.parse(conteudo);
   } catch {
     return [];
   }
 }
 
-async function salvarArquivoJSON(nomeArquivo, dados) {
-  await fs.writeFile(path.join(dataDir, nomeArquivo), JSON.stringify(dados, null, 2));
+async function gravarJSON(arquivo, conteudo) {
+  await fs.writeFile(path.join(caminhoDados, arquivo), JSON.stringify(conteudo, null, 2));
 }
 
-const LOGIN_FIXO = { usuario: 'admin', senha: '1234' };
+const credenciais = { usuario: 'admin', senha: '1234' };
 
-function protegePagina(req, res, next) {
-  if (req.session.usuario) return next();
+function verificarLogin(req, res, next) {
+  if (req.session?.usuario) return next();
   res.redirect('/login.html');
 }
 
-app.use(express.static(path.join(__dirname, 'paginas')));
+servidor.use(express.static(path.join(__dirname, 'paginas')));
 
-// POST login: seta sessão e cookie de último acesso
-app.post('/login', (req, res) => {
+servidor.post('/login', (req, res) => {
   const { usuario, senha } = req.body;
-  if (usuario === LOGIN_FIXO.usuario && senha === LOGIN_FIXO.senha) {
+  if (usuario === credenciais.usuario && senha === credenciais.senha) {
     req.session.usuario = usuario;
-    res.cookie('ultimoAcesso', new Date().toISOString(), { maxAge: 30 * 60 * 1000 });
-    res.redirect('/menu.html');  // menu.html será servido estático
+    res.cookie('ultimoAcesso', new Date().toISOString(), { maxAge: 1800000 });
+    res.redirect('/menu.html');
   } else {
-    res.send('<h1>Login inválido</h1><a href="/login.html">Voltar</a>');
+    res.send('<h1>Credenciais inválidas</h1><a href="/login.html">Tentar novamente</a>');
   }
 });
 
-// GET logout: destrói sessão
-app.get('/logout', protegePagina, (req, res) => {
+servidor.get('/logout', verificarLogin, (req, res) => {
   req.session.destroy(() => res.redirect('/login.html'));
 });
 
-// Cadastro de usuários - exibir e cadastrar
-app.get('/cadastroUsuarios', protegePagina, async (req, res) => {
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  let tabela = `<table border="1" cellpadding="5" cellspacing="0">
-    <thead><tr>
-      <th>Nome</th><th>Email</th><th>Nickname</th><th>Data de Nascimento</th><th>Assunto</th>
-    </tr></thead><tbody>`;
-
-  for (const u of usuarios) {
-    tabela += `<tr>
+servidor.get('/cadastroUsuarios', verificarLogin, async (req, res) => {
+  const usuarios = await carregarJSON('usuarios.json');
+  const linhas = usuarios.map(u => `
+    <tr>
       <td>${u.nome}</td>
       <td>${u.email}</td>
       <td>${u.nickname}</td>
       <td>${u.dataNascimento}</td>
       <td>${u.assunto}</td>
-    </tr>`;
-  }
-  tabela += '</tbody></table>';
+    </tr>`).join('');
 
-  res.send(`
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Cadastro de Usuários</title></head><body>
-      <h1>Cadastro de Usuários</h1>
-      <form method="POST" action="/cadastroUsuarios">
-        <label>Nome:<br><input type="text" name="nome" required></label><br><br>
-        <label>Email:<br><input type="email" name="email" required></label><br><br>
-        <label>Senha:<br><input type="password" name="senha" required></label><br><br>
-        <label>Nickname:<br><input type="text" name="nickname" required></label><br><br>
-        <label>Data de Nascimento:<br><input type="date" name="dataNascimento" required></label><br><br>
-        <label>Assunto preferido:<br>
-          <select name="assunto" required>
-            <option value="">--Selecione--</option>
-            <option value="Futebol">Futebol</option>
-            <option value="Games">Games</option>
-            <option value="Carros">Carros</option>
-            <option value="Música">Música</option>
-          </select>
-        </label><br><br>
-        <button type="submit">Cadastrar</button>
-      </form>
-      <hr>
-      <h2>Usuários cadastrados</h2>
-      ${tabela}
-      <br><a href="/menu.html">Voltar ao menu</a>
-    </body></html>`);
+  res.send(`<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>Cadastro</title></head><body>
+  <h1>Cadastro</h1>
+  <form method="POST" action="/cadastroUsuarios">
+    <label>Nome: <input type="text" name="nome" required></label><br>
+    <label>Email: <input type="email" name="email" required></label><br>
+    <label>Senha: <input type="password" name="senha" required></label><br>
+    <label>Nickname: <input type="text" name="nickname" required></label><br>
+    <label>Data de Nascimento: <input type="date" name="dataNascimento" required></label><br>
+    <label>Assunto: 
+      <select name="assunto" required>
+        <option value="">Selecione</option>
+        <option>Futebol</option>
+        <option>Games</option>
+        <option>Carros</option>
+        <option>Música</option>
+      </select>
+    </label><br>
+    <button type="submit">Enviar</button>
+  </form>
+  <h2>Lista de usuários</h2>
+  <table border="1"><thead><tr>
+    <th>Nome</th><th>Email</th><th>Nickname</th><th>Nascimento</th><th>Assunto</th>
+  </tr></thead><tbody>${linhas}</tbody></table>
+  <a href="/menu.html">Menu</a>
+</body></html>`);
 });
 
-app.post('/cadastroUsuarios', protegePagina, async (req, res) => {
+servidor.post('/cadastroUsuarios', verificarLogin, async (req, res) => {
   const { nome, email, senha, nickname, dataNascimento, assunto } = req.body;
-
-  if (!nome || !email || !senha || !nickname || !dataNascimento || !assunto) {
-    return res.send('<h1>Dados incompletos</h1><a href="/cadastroUsuarios">Voltar</a>');
+  if (![nome, email, senha, nickname, dataNascimento, assunto].every(Boolean)) {
+    return res.send('<h1>Preencha todos os campos</h1><a href="/cadastroUsuarios">Voltar</a>');
   }
 
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  const existe = usuarios.some(u => u.email === email || u.nickname === nickname);
-  if (existe) {
-    return res.send('<h1>Usuário com email ou nickname já cadastrado</h1><a href="/cadastroUsuarios">Voltar</a>');
+  const usuarios = await carregarJSON('usuarios.json');
+  if (usuarios.some(u => u.email === email || u.nickname === nickname)) {
+    return res.send('<h1>Email ou Nickname já usado</h1><a href="/cadastroUsuarios">Voltar</a>');
   }
 
   usuarios.push({ nome, email, senha, nickname, dataNascimento, assunto });
-  await salvarArquivoJSON('usuarios.json', usuarios);
-
+  await gravarJSON('usuarios.json', usuarios);
   res.redirect('/cadastroUsuarios');
 });
 
-// Bate-papo
-function gerarPaginaBatePapo(nickname, assunto, mensagens) {
-  const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
-  return `
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Bate-papo - ${assunto}</title></head><body>
-      <h1>Bate-papo: ${assunto}</h1>
-      <form id="formMensagem">
-        <input type="hidden" name="assunto" value="${assunto}">
-        <label>Usuário:
-          <input type="text" name="usuario" value="${nickname}" readonly>
-        </label><br><br>
-        <label>Mensagem:<br>
-          <textarea name="mensagem" id="txtMensagem" rows="4" cols="50" required></textarea>
-        </label><br><br>
-        <button type="submit">Enviar</button>
-      </form>
-      <hr><h2>Mensagens</h2>
-      <div id="divMensagens" style="border:1px solid #ccc; height:300px; overflow-y:auto; padding:5px;">
-        ${mensagensFiltradas.length === 0
-          ? '<p>Sem mensagens.</p>'
-          : mensagensFiltradas.map(m => `<p><b>${m.usuario}</b> [${new Date(m.dataHora).toLocaleString()}]: ${m.mensagem}</p>`).join('')}
-      </div>
-      <br><a href="/batepapo.html">Voltar</a> | <a href="/menu.html">Menu</a>
+function montarTelaBatePapo(nick, tema, mensagens) {
+  const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === tema.toLowerCase());
+  const mensagensHtml = mensagensFiltradas.map(m =>
+    `<p><strong>${m.usuario}</strong> [${new Date(m.dataHora).toLocaleString()}]: ${m.mensagem}</p>`
+  ).join('') || '<p>Sem mensagens ainda.</p>';
 
-      <script>
-        const form = document.getElementById('formMensagem');
-        const divMensagens = document.getElementById('divMensagens');
-        const txtMensagem = document.getElementById('txtMensagem');
-
-        form.addEventListener('submit', async e => {
-          e.preventDefault();
-
-          const usuario = form.usuario.value;
-          const assunto = form.assunto.value;
-          const mensagem = txtMensagem.value;
-
-          try {
-            const response = await fetch('/postarMensagem', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ usuario, assunto, mensagem })
-            });
-
-            if (!response.ok) throw new Error('Erro no envio');
-
-            const data = await response.json();
-
-            if (data.mensagens.length === 0) {
-              divMensagens.innerHTML = '<p>Sem mensagens.</p>';
-            } else {
-              divMensagens.innerHTML = data.mensagens.map(m =>
-                \`<p><b>\${m.usuario}</b> [\${new Date(m.dataHora).toLocaleString()}]: \${m.mensagem}</p>\`
-              ).join('');
-            }
-
-            txtMensagem.value = '';
-            txtMensagem.focus();
-            divMensagens.scrollTop = divMensagens.scrollHeight;
-
-          } catch (err) {
-            alert('Erro ao enviar mensagem.');
-            console.error(err);
-          }
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${tema}</title></head><body>
+    <h1>Bate-papo - ${tema}</h1>
+    <form id="formMensagem">
+      <input type="hidden" name="assunto" value="${tema}">
+      <input type="text" name="usuario" value="${nick}" readonly><br>
+      <textarea name="mensagem" id="txtMensagem" rows="4" required></textarea><br>
+      <button>Enviar</button>
+    </form>
+    <h2>Mensagens</h2>
+    <div id="mensagens" style="height:300px; overflow:auto; border:1px solid #ccc;">
+      ${mensagensHtml}
+    </div>
+    <script>
+      const form = document.getElementById('formMensagem');
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const dados = {
+          usuario: form.usuario.value,
+          assunto: form.assunto.value,
+          mensagem: form.mensagem.value
+        };
+        const resp = await fetch('/postarMensagem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
         });
-      </script>
-    </body></html>`;
+        const resultado = await resp.json();
+        document.getElementById('mensagens').innerHTML = resultado.mensagens.map(m =>
+          \`<p><strong>\${m.usuario}</strong> [\${new Date(m.dataHora).toLocaleString()}]: \${m.mensagem}</p>\`
+        ).join('');
+        form.mensagem.value = '';
+        form.mensagem.focus();
+      });
+    </script>
+    <a href="/batepapo.html">Voltar</a> | <a href="/menu.html">Menu</a>
+  </body></html>`;
 }
 
-app.post('/batepapo', protegePagina, async (req, res) => {
+servidor.post('/batepapo', verificarLogin, async (req, res) => {
   const { nickname, assunto } = req.body;
   if (!nickname || !assunto) return res.redirect('/batepapo.html');
-  const mensagens = await lerArquivoJSON('mensagens.json');
-  res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
+  const msgs = await carregarJSON('mensagens.json');
+  res.send(montarTelaBatePapo(nickname, assunto, msgs));
 });
 
-app.post('/postarMensagem', protegePagina, async (req, res) => {
-  try {
-    const { usuario, mensagem = '', assunto } = req.body;
+servidor.post('/postarMensagem', verificarLogin, async (req, res) => {
+  const { usuario, mensagem = '', assunto } = req.body;
+  if (!usuario || !assunto) return res.status(400).json({ erro: 'Dados incompletos' });
 
-    if (!usuario || !assunto) {
-      return res.status(400).json({ erro: 'Dados incompletos' });
-    }
-
-    const mensagens = await lerArquivoJSON('mensagens.json');
-    mensagens.push({ usuario, mensagem, assunto, dataHora: new Date().toISOString() });
-    await salvarArquivoJSON('mensagens.json', mensagens);
-
-    const mensagensFiltradas = mensagens.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
-    return res.json({ mensagens: mensagensFiltradas });
-  } catch (error) {
-    console.error('Erro em /postarMensagem:', error);
-    return res.status(500).json({ erro: 'Erro interno no servidor' });
-  }
+  const msgs = await carregarJSON('mensagens.json');
+  msgs.push({ usuario, mensagem, assunto, dataHora: new Date().toISOString() });
+  await gravarJSON('mensagens.json', msgs);
+  const filtradas = msgs.filter(m => m.assunto.toLowerCase() === assunto.toLowerCase());
+  res.json({ mensagens: filtradas });
 });
 
-app.get('/batepapo', protegePagina, async (req, res) => {
+servidor.get('/batepapo', verificarLogin, async (req, res) => {
   const { nickname, assunto } = req.query;
   if (!nickname || !assunto) return res.redirect('/batepapo.html');
-  const mensagens = await lerArquivoJSON('mensagens.json');
-  res.send(gerarPaginaBatePapo(nickname, assunto, mensagens));
+  const mensagens = await carregarJSON('mensagens.json');
+  res.send(montarTelaBatePapo(nickname, assunto, mensagens));
 });
 
-// Redireciona raiz para login
-app.get('/', (req, res) => res.redirect('/login.html'));
+servidor.get('/', (req, res) => res.redirect('/login.html'));
 
-// 404 fallback
-app.use((req, res) => {
-  res.status(404).send('<h1>404 - Página não encontrada</h1><a href="/login.html">Login</a>');
+servidor.use((req, res) => {
+  res.status(404).send('<h1>Erro 404 - Página não existe</h1><a href="/login.html">Login</a>');
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Servidor rodando em http://localhost:${port}`));
+const porta = process.env.PORT || 3000;
+servidor.listen(porta, () => console.log(`Aplicação ativa: http://localhost:${porta}`));
