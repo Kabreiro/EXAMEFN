@@ -79,34 +79,42 @@ app.get('/menu.html', protegePagina, (req, res) => {
 
 // Página bate-papo dinâmica com lista de assuntos e input para nickname
 app.get('/batepapo', protegePagina, async (req, res) => {
-  const usuarios = await lerArquivoJSON('usuarios.json');
-  const assuntosUnicos = [...new Set(usuarios.map(u => u.assunto))];
+  try {
+    const usuarios = await lerArquivoJSON('usuarios.json');
+    console.log('Usuarios lidos:', usuarios);
 
-  const opcoes = assuntosUnicos.map(assunto => `<option value="${assunto}">${assunto}</option>`).join('\n');
+    const assuntosUnicos = [...new Set(usuarios.map(u => u.assunto))];
+    console.log('Assuntos encontrados:', assuntosUnicos);
 
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head><meta charset="UTF-8" /><title>Sala de Bate-papo</title></head>
-    <body>
-      <h1>Sala de Bate-papo</h1>
-      <form method="POST" action="/batepapo">
-        <label>Escolha um assunto:
-          <select name="assunto" required>
-            <option value="">--Selecione--</option>
-            ${opcoes}
-          </select>
-        </label><br><br>
-        <label>Digite seu nickname:
-          <input type="text" name="nickname" required />
-        </label><br><br>
-        <button>Entrar no Bate-papo</button>
-      </form>
-      <br>
-      <a href="/menu.html">Voltar ao Menu</a>
-    </body>
-    </html>
-  `);
+    const opcoes = assuntosUnicos.map(assunto => `<option value="${assunto}">${assunto}</option>`).join('\n');
+
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head><meta charset="UTF-8" /><title>Sala de Bate-papo</title></head>
+      <body>
+        <h1>Sala de Bate-papo</h1>
+        <form method="POST" action="/batepapo">
+          <label>Escolha um assunto:
+            <select name="assunto" required>
+              <option value="">--Selecione--</option>
+              ${opcoes}
+            </select>
+          </label><br><br>
+          <label>Digite seu nickname:
+            <input type="text" name="nickname" required />
+          </label><br><br>
+          <button>Entrar no Bate-papo</button>
+        </form>
+        <br>
+        <a href="/menu.html">Voltar ao Menu</a>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Erro ao carregar batepapo:', error);
+    res.status(500).send('Erro interno do servidor');
+  }
 });
 
 // Processa seleção de assunto e nickname, mostra mensagens e formulário de envio

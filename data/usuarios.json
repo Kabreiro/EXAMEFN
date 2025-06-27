@@ -14,5 +14,13 @@
     "dataNascimento": "2000-09-10",
     "nickname": "Pedrot",
     "assunto": "Games"
+  },
+  {
+    "nome": "Luan",
+    "email": "admin@admin.com",
+    "senha": "5345435",
+    "dataNascimento": "2003-10-10",
+    "nickname": "LTN",
+    "assunto": "Games"
   }
 ]
