@@ -39,6 +39,7 @@ function protegePagina(req, res, next) {
 
 app.use(express.static(path.join(__dirname, 'paginas')));
 
+// Login
 app.post('/login', (req, res) => {
   const { usuario, senha } = req.body;
   if (usuario === LOGIN_FIXO.usuario && senha === LOGIN_FIXO.senha) {
@@ -51,10 +52,12 @@ app.post('/login', (req, res) => {
   }
 });
 
+// Logout
 app.get('/logout', protegePagina, (req, res) => {
   req.session.destroy(() => res.redirect('/login.html'));
 });
 
+// Menu com data do último acesso
 app.get('/menu.html', protegePagina, (req, res) => {
   const ultimoAcesso = req.cookies.ultimoAcesso;
   let mensagem = 'Último acesso: não disponível.';
@@ -68,32 +71,45 @@ app.get('/menu.html', protegePagina, (req, res) => {
     <p>${mensagem}</p>
     <ul>
       <li><a href="/cadastroUsuario.html">Cadastro de Usuários</a></li>
-      <li><a href="/batepapo.html">Bate-papo</a></li>
+      <li><a href="/batepapo">Bate-papo</a></li>
       <li><a href="/logout">Logout</a></li>
     </ul>
   `);
 });
 
-app.get('/batepapo.html', protegePagina, (req, res) => {
+// Página bate-papo dinâmica com lista de assuntos e input para nickname
+app.get('/batepapo', protegePagina, async (req, res) => {
+  const usuarios = await lerArquivoJSON('usuarios.json');
+  const assuntosUnicos = [...new Set(usuarios.map(u => u.assunto))];
+
+  const opcoes = assuntosUnicos.map(assunto => `<option value="${assunto}">${assunto}</option>`).join('\n');
+
   res.send(`
-    <h1>Selecione o Assunto do Bate-papo</h1>
-    <form method="POST" action="/batepapo">
-      <label>Assunto:
-        <select name="assunto" required>
-          <option value="">--Selecione--</option>
-          <option value="Futebol">Futebol</option>
-          <option value="Games">Games</option>
-          <option value="Carros">Carros</option>
-          <option value="Música">Música</option>
-        </select>
-      </label><br><br>
-      <button>Entrar no Bate-papo</button>
-    </form>
-    <br>
-    <a href="/menu.html">Voltar ao Menu</a>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head><meta charset="UTF-8" /><title>Sala de Bate-papo</title></head>
+    <body>
+      <h1>Sala de Bate-papo</h1>
+      <form method="POST" action="/batepapo">
+        <label>Escolha um assunto:
+          <select name="assunto" required>
+            <option value="">--Selecione--</option>
+            ${opcoes}
+          </select>
+        </label><br><br>
+        <label>Digite seu nickname:
+          <input type="text" name="nickname" required />
+        </label><br><br>
+        <button>Entrar no Bate-papo</button>
+      </form>
+      <br>
+      <a href="/menu.html">Voltar ao Menu</a>
+    </body>
+    </html>
   `);
 });
 
+// Processa seleção de assunto e nickname, mostra mensagens e formulário de envio
 app.post('/batepapo', protegePagina, async (req, res) => {
   const { assunto, nickname } = req.body;
 
@@ -101,19 +117,20 @@ app.post('/batepapo', protegePagina, async (req, res) => {
     return res.send(`
       <h1>Erro</h1>
       <p>Assunto e nickname são obrigatórios.</p>
-      <a href="/batepapo.html">Voltar</a>
+      <a href="/batepapo">Voltar</a>
     `);
   }
 
   const usuarios = await lerArquivoJSON('usuarios.json');
   const mensagens = await lerArquivoJSON('mensagens.json');
 
+  // Verifica se o nickname é válido para o assunto
   const usuarioSelecionado = usuarios.find(u => u.nickname === nickname && u.assunto === assunto);
   if (!usuarioSelecionado) {
     return res.send(`
       <h1>Erro</h1>
       <p>Nickname inválido para o assunto selecionado.</p>
-      <a href="/batepapo.html">Voltar</a>
+      <a href="/batepapo">Voltar</a>
     `);
   }
 
@@ -143,10 +160,11 @@ app.post('/batepapo', protegePagina, async (req, res) => {
         : mensagensDoAssunto.map(m => `<p><b>${m.usuario}</b> [${new Date(m.dataHora).toLocaleString()}]: ${m.mensagem}</p>`).join('')}
     </div>
     <br>
-    <a href="/batepapo.html">Voltar à seleção de assunto</a> | <a href="/menu.html">Menu</a>
+    <a href="/batepapo">Voltar à seleção de assunto</a> | <a href="/menu.html">Menu</a>
   `);
 });
 
+// Posta uma nova mensagem no bate-papo
 app.post('/postarMensagem', protegePagina, async (req, res) => {
   const { usuario, mensagem, assunto } = req.body;
 
@@ -154,19 +172,18 @@ app.post('/postarMensagem', protegePagina, async (req, res) => {
     return res.send(`
       <h1>Erro ao postar mensagem</h1>
       <p>Nickname, mensagem e assunto são obrigatórios, e a mensagem não pode estar vazia.</p>
-      <a href="/batepapo.html">Voltar</a>
+      <a href="/batepapo">Voltar</a>
     `);
   }
 
   const usuarios = await lerArquivoJSON('usuarios.json');
   const usuariosDoAssunto = usuarios.filter(u => u.assunto === assunto);
-
   const usuarioValido = usuariosDoAssunto.find(u => u.nickname === usuario);
   if (!usuarioValido) {
     return res.send(`
       <h1>Erro ao postar mensagem</h1>
       <p>Nickname inválido para o assunto escolhido.</p>
-      <a href="/batepapo.html">Voltar</a>
+      <a href="/batepapo">Voltar</a>
     `);
   }
 
